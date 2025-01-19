@@ -60,3 +60,13 @@ test-results/
 
 # Temporary Node.js debug output
 *.tgz
+
+# Database (if it contains temporary or runtime data)
+db/*.sqlite
+db/*.db
+
+# Ignore temp files and backups
+*.tmp
+*.bak
+*.swp
+*~
