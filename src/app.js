@@ -29,6 +29,7 @@ import likeRouter from "../src/routes/like.routes.js";
 import tweetRouter from "../src/routes/tweet.routes.js";
 import commentRouter from "../src/routes/comment.routes.js"
 import playlistRouter from "../src/routes/playlist.routes.js"
+import subscriptionRouter from "../src/routes/subscription.routes.js"
 
 // routes
 app.use("/api/v1/healthcheck", healthcheckRouter);
@@ -38,6 +39,7 @@ app.use("/api/v1/like", likeRouter);
 app.use("/api/v1/tweet", tweetRouter);
 app.use("/api/v1/comment", commentRouter);
 app.use("/api/v1/playlist", playlistRouter);
+app.use("/api/v1/subscription", subscriptionRouter);
 
 // good practice to have control over the errors. (Optional) This error.middleware.js file changes rarely.
 import { errorHandler } from "./middlewares/error.middleware.js";
