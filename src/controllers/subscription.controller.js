@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose"
+import mongoose, { isValidObjectId, ObjectId } from "mongoose"
 import { User } from "../models/user.models.js"
 import { Subscription } from "../models/subscription.models.js"
 import { ApiError } from "../utils/ApiError.js"
@@ -29,7 +29,6 @@ const toggleSubscription = asyncHandler(async (req, res) => {
       .status(404)
       .json(new ApiError(404, "Channel not found"))
   }
-
   // whoever is the user... want to subscribe or unsubscribe to the channel.
 
   const existingSubscription = await Subscription.findOne({
@@ -63,7 +62,69 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { channelId } = req.params
-})
+
+  // dont need user verification
+  if (!channelId || !isValidObjectId(channelId)) {
+    return res
+      .status(400)
+      .json(new ApiError(400, "Channel ID not valid"))
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(channelId)) {
+    return res.status(400).json(new ApiError(400, "Invalid Channel ID"));
+  }
+
+
+  const channelOwner = await User.findById(channelId);
+  if (!channelOwner) {
+    return res
+      .status(404)
+      .json(new ApiError(404, "Channel not found"))
+  }
+  try {
+    console.log("Fetching subscribers for channel:", channelId);
+
+    const subscribers = await Subscription.aggregate([
+      {
+        $match: {
+          channel: new mongoose.Types.ObjectId(channelId), // Convert to ObjectId
+        },
+      },
+      {
+        $lookup: {
+          from: "users", // Ensure this matches the collection name
+          localField: "subscriber",
+          foreignField: "_id",
+          as: "subscriberDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$subscriberDetails",
+          preserveNullAndEmptyArrays: true, // Prevent errors when no match
+        },
+      },
+      {
+        $project: {
+          subscriber: 1,
+          subscriberDetails: 1,
+        },
+      },
+    ]);
+
+    console.log("Subscribers fetched:", subscribers);
+
+    return res.status(200).json(
+      new ApiResponse(200, "Successfully fetched subscribers", {
+        subscriberCount: subscribers.length,
+        subscribers,
+      })
+    );
+  } catch (error) {
+    console.error("Error fetching subscribers:", error);
+    return res.status(500).json(new ApiError(500, "An error occurred", { error: error.message }));
+  }
+});
 
 // controller to return channel list to which user has subscribed
 const getSubscribedChannels = asyncHandler(async (req, res) => {
