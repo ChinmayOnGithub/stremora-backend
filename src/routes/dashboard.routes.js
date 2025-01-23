@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
-  getChannelStats
+  getChannelStats,
+  getChannelVideos
 } from "../controllers/dashboard.controller.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ const router = Router();
 
 // non secure routes
 router.route("/get-channel-stats/:channelId").get(getChannelStats)
+router.route("/get-channel-videos/:channelId").get(getChannelVideos)
 
 
 export default router

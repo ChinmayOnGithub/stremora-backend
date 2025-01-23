@@ -78,6 +78,47 @@ const getChannelStats = asyncHandler(async (req, res) => {
 
 const getChannelVideos = asyncHandler(async (req, res) => {
   // TODO: Get all the videos uploaded by the channel
+
+  const { channelId } = req.params;
+
+  if (!channelId || !mongoose.Types.ObjectId.isValid(channelId)) {
+    return res
+      .status(404)
+      .json(new ApiError(404, "Channel ID invalid"));
+  }
+
+  const channel = await User.findById(channelId);
+  if (!channel) {
+    return res
+      .status(404)
+      .json(new ApiError(404, "Channel not found"));
+  }
+
+
+  try {
+    const videos = await Video.find({ owner: new mongoose.Types.ObjectId(channelId) });
+    const videoCount = videos.length;
+    if (!videos) {
+      return res
+        .status(404)
+        .json(new ApiError(404, "User has not uploaded anything", videos));
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Fetched channel videos successfully",
+        {
+          videoCount,
+          videos
+        }));
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiError(500, "Something went wrong while fetching channel videos ", error
+      ));
+
+  }
+
 })
 
 export {
