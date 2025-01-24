@@ -116,7 +116,6 @@ const getChannelVideos = asyncHandler(async (req, res) => {
       .status(500)
       .json(new ApiError(500, "Something went wrong while fetching channel videos ", error
       ));
-
   }
 
 })
