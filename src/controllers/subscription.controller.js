@@ -31,6 +31,11 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   }
   // whoever is the user... want to subscribe or unsubscribe to the channel.
 
+  // You can not subscribe your own channel
+  if (user._id.equals(channelId)) {
+    return res.status(400).json(new ApiError(400, "You cannot subscribe to your own channel"));
+  }
+
   const existingSubscription = await Subscription.findOne({
     subscriber: req.user?._id,
     channel: channelId
