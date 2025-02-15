@@ -6,13 +6,19 @@ import { upload } from "./middlewares/multer.middleware.js";
 
 const app = express();
 
-app.use(
-    // cors is middleware that decide who can access our server
-    cors({
-        origin: process.env.CORS_ORIGIN,
-        credentials: true
-    })
-)
+app.use(cors({
+    origin: "http://localhost:5173", // Change to your frontend URL
+    credentials: true,  // Allow cookies
+}));
+
+
+// app.use(
+//     // cors is middleware that decide who can access our server
+//     cors({
+//         origin: process.env.CORS_ORIGIN,
+//         credentials: true
+//     })
+// )
 
 // common middlewares
 // app.use(express.json({ limit: "16kb" }));
