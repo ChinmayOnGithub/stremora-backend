@@ -148,7 +148,7 @@ const loginUser = asyncHandler(async (req, res) => {
         $or: [{ username }, { email }]
     });
     if (!user) {
-        throw new ApiError(409, "User not found. Please Register.");
+        throw new ApiError(404, "User not found. Please Register.");
     };
 
 
