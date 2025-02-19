@@ -98,12 +98,15 @@ const publishAVideo = asyncHandler(async (req, res) => {
     // now that the video uploaded to the cloudanary 
     // lets create a video with all the components and link and store it in the datebase
     try {
+        const publicId = videoCloudinary.public_id; // Extract public ID from URL
+        const result = await cloudinary.v2.api.resource(publicId, { resource_type: 'video' });
+
         const video = new Video({
             videoFile: videoCloudinary.url, // need to mention url becuase the videoCloudinary is actually an Object
-            thumbnail: thumbnail.url || "",
+            thumbnail: thumbnail?.url || "",
             title,
             description,
-            duration: 15,
+            duration: result.duration,
             owner: user._id
         });
 
