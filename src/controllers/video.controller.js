@@ -8,6 +8,8 @@ import {
     uploadOnCloudinary,
     deleteFromCloudinary
 } from "../utils/cloudinary.js"
+import { v2 as cloudinary } from 'cloudinary';
+
 
 
 
@@ -97,20 +99,24 @@ const publishAVideo = asyncHandler(async (req, res) => {
     }
     // now that the video uploaded to the cloudanary 
     // lets create a video with all the components and link and store it in the datebase
+    console.log("Video Cloudinary Response:", videoCloudinary);
+    const minutes = Math.floor((videoCloudinary.duration % 3600) / 60);
+    const seconds = Math.floor(videoCloudinary.duration % 60);
+    const videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`; // Ensures `0:5` → `0:05`
+
     try {
-        const publicId = videoCloudinary.public_id; // Extract public ID from URL
-        const result = await cloudinary.v2.api.resource(publicId, { resource_type: 'video' });
 
         const video = new Video({
             videoFile: videoCloudinary.url, // need to mention url becuase the videoCloudinary is actually an Object
             thumbnail: thumbnail?.url || "",
             title,
             description,
-            duration: result.duration,
+            duration: videoDuration || '0',
             owner: user._id
         });
 
         const publishedVideo = await video.save();
+        console.log(video);
 
         if (!publishedVideo) {
             throw new ApiError(500, "Something went wrong while publishing the video.");
