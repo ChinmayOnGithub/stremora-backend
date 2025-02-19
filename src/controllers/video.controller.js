@@ -48,7 +48,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
         .find(filter)
         .sort({ [sortBy]: sortType === 'desc' ? -1 : 1 })
         .skip((page - 1) * limit) // skip prev pages
-        .limit(limit); // limits number of documents in one page
+        .limit(limit) // limits number of documents in one page
+        .populate('owner', 'username email avatar'); // Fetch owner's name, email, and avatar
+
 
     res
         .status(200)

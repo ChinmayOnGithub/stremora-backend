@@ -14,7 +14,6 @@ app.use(cors({
 }));
 
 
-
 // app.use(
 //     // cors is middleware that decide who can access our server
 //     cors({
