@@ -138,7 +138,9 @@ const getVideoById = asyncHandler(async (req, res) => {
     }
     // Find video by id
     try {
-        const video = await Video.findById(videoId);
+        const video = await Video.findById(videoId)
+            .populate('owner', 'name email avatar'); // Fetch owner's name, email, and avatar
+
 
         if (!video) {
             console.log("Video not found");
