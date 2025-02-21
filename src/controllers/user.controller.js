@@ -107,7 +107,7 @@ const registerUser = asyncHandler(async (req, res) => {
             email,
             password,
             avatar: avatar.url,
-            coverImage: coverImage?.url || DEFAULT_COVER_IMAGE,
+            coverImage: coverImage?.url || "", // DEFAULT_COVER_IMAGE can be used in place of "" but i handled it in front end
             username: username.toLowerCase(),
         });
 
