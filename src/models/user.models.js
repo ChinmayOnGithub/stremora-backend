@@ -15,6 +15,7 @@ updatedAt Date
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { DEFAULT_COVER_IMAGE } from "../constants.js";
 
 const userSchema = new Schema(
     {
@@ -46,6 +47,7 @@ const userSchema = new Schema(
         },
         coverImage: {
             type: String, //cloudanary URL
+            default: DEFAULT_COVER_IMAGE
         },
         watchHistory: [
             {

@@ -9,6 +9,8 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 import multer from "multer";
 import { upload } from '../middlewares/multer.middleware.js';
 import mongoose from "mongoose";
+import { DEFAULT_COVER_IMAGE } from "../constants.js";
+
 
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -76,7 +78,7 @@ const registerUser = asyncHandler(async (req, res) => {
     //     coverImage = await uploadOnCloudinary(coverImageLocalPath)
     // }
 
-    let avatar;
+    let avatar, coverImage;
     try {
         avatar = await uploadOnCloudinary(avatarLocalPath);
         console.log("Uploaded avatar", avatar);
@@ -85,14 +87,16 @@ const registerUser = asyncHandler(async (req, res) => {
         console.log("Error uploading avatar!.", error);
         throw new ApiError(500, "Failed to upload avatar");
     }
-    let coverImage;
-    try {
-        coverImage = await uploadOnCloudinary(coverImageLocalPath);
-        console.log("Uploaded coverImage", coverImage);
+    // optionally uploading the coverImage
+    if (coverImageLocalPath) {
+        try {
+            coverImage = await uploadOnCloudinary(coverImageLocalPath);
+            console.log("Uploaded coverImage", coverImage);
 
-    } catch (error) {
-        console.log("Error uploading coverImage!.", error);
-        throw new ApiError(500, "Failed to upload coverImage");
+        } catch (error) {
+            console.log("Error uploading coverImage!.", error);
+            throw new ApiError(500, "Failed to upload coverImage");
+        }
     }
 
 
@@ -103,7 +107,7 @@ const registerUser = asyncHandler(async (req, res) => {
             email,
             password,
             avatar: avatar.url,
-            coverImage: coverImage?.url || "",
+            coverImage: coverImage?.url || DEFAULT_COVER_IMAGE,
             username: username.toLowerCase(),
         });
 
