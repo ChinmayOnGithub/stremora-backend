@@ -45,12 +45,18 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // check if user already existed
     // its a database operation so use await.
-    const existedUser = await User.findOne({
-        $or: [{ username }, { email }]
-    });
-    if (existedUser) {
-        throw new ApiError(409, "User with given email or username already exists");
-    };
+
+    // Check if the username already exists
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+        throw new ApiError(409, "User with this username already exists.");
+    }
+    // Check if the email already exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+        throw new ApiError(409, "User with this email already exists.");
+    }
+
 
     // now handling the file upload part
     console.warn(req.files)
@@ -134,58 +140,73 @@ const loginUser = asyncHandler(async (req, res) => {
     const { email, username, password } = req.body;
 
     // validation
-    if (!email?.trim()) {
-        throw new ApiError(400, "Email is required");
+    if (!email?.trim() && !username?.trim()) {
+        throw new ApiError(400, "Email or Username is required");
     }
-
     if (!password?.trim()) {
         throw new ApiError(400, "Password is required");
     }
 
+    try {
 
-    // check for user
-    const user = await User.findOne({
-        $or: [{ username }, { email }]
-    });
-    if (!user) {
-        throw new ApiError(404, "User not found. Please Register.");
-    };
+        // Dynamically build the query only with defined values
+        const query = {};
+        if (email) query.email = email;
+        if (username) query.username = username;
 
+        // Fetch user using either email or username
+        // const user = await User.findOne({ $or: [query] });
 
-    // Validate password
-    const isPasswordValid = await user.isPasswordCorrect(password)
-    if (!isPasswordValid) {
-        throw new ApiError(401, "Password is incorrect / invalid");
+        // check for user
+        const user = await User.findOne({
+            $or: [{ username }, { email }]
+        });
+        if (!user) {
+            throw new ApiError(404, "Invalid credentials.");
+        };
+
+        // Validate password
+        const isPasswordValid = await user.isPasswordCorrect(password)
+        if (!isPasswordValid) {
+            throw new ApiError(401, "Invalid credentials.");
+        }
+
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
+
+        // now that the user is logged in and the access and refresh tokens are generated
+        // We have two options 1. Take existing user object and add Tokens to it
+        //                      2. Fetch a new user object from the Database. (more reliable)
+
+        const loggedInUser = await User.findById(user._id)
+            .select("-password -refreshToken");
+
+        if (!loggedInUser) {
+            return res.status(500).json(new ApiError(500, "Something went wrong while fetching user data."));
+        }
+
+        const options = {
+            httpOnly: true, // makes the cookie non modiefiable from client side ... Prevents client-side access
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Strict"
+        }
+
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json(new ApiResponse(
+                200,
+                { user: loggedInUser, accessToken, refreshToken }, // This is backup for mobile because we can not store cookies on mobile devices. Hence also providing accessToken and refreshToken ((Mobile APP)) because backend can have any frontend.
+                "User logged in successfully!"
+            ));
+
+    } catch (err) {
+        console.log("Something went wrong while Logging in the user.", err.message);
+        return res
+            .status(err.statusCode || 500)
+            .json(new ApiError(err.statusCode || 500, err.message || "Internal Server Error"));
+
     }
-
-    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
-
-    // now that the user is logged in and the access and refresh tokens are generated
-    // We have two options 1. Take existing user object and add Tokens to it
-    //                      2. Fetch a new user object from the Database. (more reliable)
-
-    const loggedInUser = await User.findById(user._id)
-        .select("-password -refreshToken");
-
-    if (!loggedInUser) {
-        // TODO for you
-    }
-
-    const options = {
-        httpOnly: true, // makes the cookie non modiefiable from client side
-        secure: process.env.NODE_ENV === "production",
-    }
-
-    return res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
-        .json(new ApiResponse(
-            200,
-            { user: loggedInUser, accessToken, refreshToken }, // This is backup for mobile because we can not store cookies on mobile devices. Hence also providing accessToken and refreshToken ((Mobile APP)) because backend can have any frontend.
-            "User logged in successfully!"
-        ));
-
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
