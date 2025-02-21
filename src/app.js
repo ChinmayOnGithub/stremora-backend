@@ -10,7 +10,7 @@ app.use(cors({
     origin: ["http://localhost:5173", "https://youtube-frontend-two-rust.vercel.app"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 }));
 
 
