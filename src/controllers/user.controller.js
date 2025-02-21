@@ -137,10 +137,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler(async (req, res) => {
     // get data from body
-    const { email, username, password } = req.body;
+    const { identifier, password } = req.body;
 
     // validation
-    if (!email?.trim() && !username?.trim()) {
+    if (!identifier?.trim()) {
         throw new ApiError(400, "Email or Username is required");
     }
     if (!password?.trim()) {
@@ -161,11 +161,12 @@ const loginUser = asyncHandler(async (req, res) => {
         // });
 
         let user;
-        if (email) {
-            user = await User.findOne({ email });
-        } else if (username) {
-            user = await User.findOne({ username });
+        if (identifier.includes("@")) {
+            user = await User.findOne({ email: identifier });
+        } else {
+            user = await User.findOne({ username: identifier });
         }
+
         if (!user) {
             throw new ApiError(404, "Invalid credentials.");
         };
