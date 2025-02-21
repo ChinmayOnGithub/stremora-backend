@@ -12,13 +12,13 @@ const router = Router()
 
 
 // secure routes
-router.route("/add-comment/:videoId").post(verifyJWT, addComment)
-router.route("/update-comment/:videoId/:commentId").patch(verifyJWT, updateComment)
-router.route("/delete-comment/:videoId/:commentId").delete(verifyJWT, deleteComment)
+router.route("/add-comment/:parentId").post(verifyJWT, addComment)
+router.route("/update-comment/:parentId/:commentId").patch(verifyJWT, updateComment)
+router.route("/delete-comment/:parentId/:commentId").delete(verifyJWT, deleteComment)
 
 
 // not secure routes
-router.route("/get-video-comments/:videoId").get(getVideoComments)
+router.route("/get-video-comments/:parentId").get(getVideoComments)
 
 
 

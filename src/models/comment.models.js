@@ -18,14 +18,20 @@ const commentSchema = new Schema(
             type: String,
             required: true,
         },
-        video: {
-            type: Schema.Types.ObjectId,
-            ref: "Video",
-        },
         owner: {
             type: Schema.Types.ObjectId,
             ref: "User",
+            required: true,
+        }, parent: {
+            type: Schema.Types.ObjectId,
+            required: true,
+            refPath: "parentType", // Dynamically references "Video" or "Tweet" and its _id is assigned
         },
+        parentType: {
+            type: String,
+            required: true,
+            enum: ["Video", "Tweet"], // Restricts parentType to these two models
+        }
     },
     { timestamps: true } // createdAt and updatedAt is added here
 )
