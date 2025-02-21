@@ -150,17 +150,22 @@ const loginUser = asyncHandler(async (req, res) => {
     try {
 
         // Dynamically build the query only with defined values
-        const query = {};
-        if (email) query.email = email;
-        if (username) query.username = username;
+
 
         // Fetch user using either email or username
         // const user = await User.findOne({ $or: [query] });
 
         // check for user
-        const user = await User.findOne({
-            $or: [{ username }, { email }]
-        });
+        // const user = await User.findOne({
+        //     $or: [{ username }, { email }]
+        // });
+
+        let user;
+        if (email) {
+            user = await User.findOne({ email });
+        } else if (username) {
+            user = await User.findOne({ username });
+        }
         if (!user) {
             throw new ApiError(404, "Invalid credentials.");
         };
