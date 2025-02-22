@@ -96,16 +96,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
     if (!videoLocalPath) {
         return res.status(404).json(new ApiError(404, "Video file is required"));
     }
-    // Thumbnail is optional
-    let thumbnail = null;
-    if (thumbnailLocalPath) {
-        try {
-            thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-        } catch (error) {
-            console.log("Error uploading thumbnail!.", error);
-            throw new ApiError(500, "Failed to upload thumbnail file");
-        }
-    }
     let videoCloudinary = null;
     try {
         videoCloudinary = await uploadOnCloudinary(videoLocalPath)
@@ -119,6 +109,51 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const minutes = Math.floor((videoCloudinary.duration % 3600) / 60);
     const seconds = Math.floor(videoCloudinary.duration % 60);
     const videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`; // Ensures `0:5` → `0:05`
+
+
+    // Thumbnail is optional
+    // Handle Thumbnail (If User Uploads One)
+    // implecit creation
+    // let thumbnail;
+    // if (thumbnailLocalPath) {
+    //     try {
+    //         thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+    //     } catch (error) {
+    //         console.log("Error uploading thumbnail!", error);
+    //         throw new ApiError(500, "Failed to upload thumbnail file");
+    //     }
+    // } else {
+    //     // Auto-Generate a Thumbnail from the Video at 2 Seconds
+    //     thumbnail = {
+    //         url: videoCloudinary.url.replace("/upload/", "/upload/so_2,w_300,h_200,c_fill/") + ".jpg"
+    //     };
+    // }
+
+    let thumbnail;
+    if (thumbnailLocalPath) {
+        try {
+            thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+        } catch (error) {
+            console.log("Error uploading thumbnail!", error);
+            throw new ApiError(500, "Failed to upload thumbnail file");
+        }
+    } else {
+        // 🌟 Auto-Generate a Thumbnail from the Video at 2 Seconds Using Cloudinary API 🌟
+        try {
+            const thumbnailResponse = await cloudinary.uploader.explicit(videoCloudinary.public_id, {
+                resource_type: "video",
+                type: "upload",
+                eager: [{ format: "jpg", transformation: [{ width: 300, height: 200, crop: "fill", start_offset: "2" }] }],
+            });
+
+            thumbnail = {
+                url: thumbnailResponse.eager[0].secure_url, // Extract generated thumbnail URL
+            };
+        } catch (error) {
+            console.log("Error generating video thumbnail!", error);
+            thumbnail = { url: "" }; // Fallback to empty if thumbnail generation fails
+        }
+    }
 
     try {
 
