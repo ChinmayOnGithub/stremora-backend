@@ -7,7 +7,7 @@ import { upload } from "./middlewares/multer.middleware.js";
 const app = express();
 
 app.use(cors({
-    origin: ["http://localhost:5173", "https://youtube-frontend-two-rust.vercel.app"],
+    origin: ["http://localhost:5173", "https://youtube-frontend-two-rust.vercel.app", "http://192.168.1.9:5173"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
