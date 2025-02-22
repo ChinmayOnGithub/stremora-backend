@@ -17,46 +17,62 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy = 'createdAt', sortType = 'desc', userId } = req.query;
 
     const filter = {};
-    if (userId) {
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json(new ApiError(404, "User not found!"));
-        }
-        filter.owner = userId; // This userId is the owner of the videos we want to search
-    }
-
-    if (query) {
-        filter.$or = [
-            {
-                title:
-                {
-                    $regex: query,
-                    $options: 'i'
-                }
-            },
-            {
-                description:
-                {
-                    $regex: query,
-                    $options: 'i'
-                }
-
+    try {
+        if (userId) {
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json(new ApiError(404, "User not found!"));
             }
-        ];
+            filter.owner = userId; // This userId is the owner of the videos we want to search
+        }
+
+        if (query) {
+            filter.$or = [
+                {
+                    title:
+                    {
+                        $regex: query,
+                        $options: 'i'
+                    }
+                },
+                {
+                    description:
+                    {
+                        $regex: query,
+                        $options: 'i'
+                    }
+
+                }
+            ];
+        }
+
+
+        // Count total videos that match the filter
+        const totalVideosCount = await Video.countDocuments(filter);
+
+
+        // using pagination while getting data from database
+        const videos = await Video
+            .find(filter)
+            .sort({ [sortBy]: sortType === 'desc' ? -1 : 1 })
+            .skip((page - 1) * limit) // skip prev pages
+            .limit(limit) // limits number of documents in one page
+            .populate('owner', 'username email avatar'); // Fetch owner's name, email, and avatar
+
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, "Videos fetched successfully",
+                {
+                    totalVideosCount,
+                    videos
+                }));
+    } catch (err) {
+        console.log("Something went wrong", err);
+        return res
+            .status(500)
+            .json(new ApiError(500, "Something went wrong while fetching videos", err));
     }
-
-    // using pagination while getting data from database
-    const videos = await Video
-        .find(filter)
-        .sort({ [sortBy]: sortType === 'desc' ? -1 : 1 })
-        .skip((page - 1) * limit) // skip prev pages
-        .limit(limit) // limits number of documents in one page
-        .populate('owner', 'username email avatar'); // Fetch owner's name, email, and avatar
-
-
-    res
-        .status(200)
-        .json(new ApiResponse(200, "Videos fetched successfully", videos));
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
