@@ -270,7 +270,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secur: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production",
+            signed: true, // Prevent tampering
+            sameSite: "Strict",
+
         }
 
         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id);
@@ -289,8 +292,13 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                     "Access token refreshed successfully"));
 
     } catch (error) {
+        if (error.name === "TokenExpiredError") {
+            throw new ApiError(401, "Refresh token expired, please log in again.");
+        }
+        if (error.name === "JsonWebTokenError") {
+            throw new ApiError(401, "Invalid refresh token.");
+        }
         throw new ApiError(500, "Something went wrong while refreshing the access token");
-
     }
 })
 

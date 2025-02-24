@@ -168,7 +168,8 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
       },
       {
         $project: {
-          channelDetails: 1,
+          "channelDetails.password": 0, // Exclude password
+          "channelDetails.refreshToken": 0 // Exclude refreshToken        }
         }
       }
     ]);
