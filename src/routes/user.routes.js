@@ -33,6 +33,8 @@ router.route("/register").post(upload.fields([
 
 router.route("/login").post(loginUser)
 router.route("/refresh-token").post(refreshAccessToken)
+// user should be able to access other channel without login
+router.route("/c/:username").get(getUserChannelProfile)
 
 
 // secured routes
@@ -40,7 +42,6 @@ router.route("/logout").post(verifyJWT, logoutUser)
 router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 router.route("/current-user").get(verifyJWT, getCurrentUser)
 
-router.route("/c/:username").get(verifyJWT, getUserChannelProfile)
 router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 
 router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
