@@ -347,11 +347,46 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     }
 });
 
+
+const incrementView = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+        console.log("Invalid videoId");
+        return res.status(400).json(new ApiError(400, "Valid Video ID is required"));
+    }
+
+    try {
+        const video = await Video.findByIdAndUpdate(
+            videoId,
+            { $inc: { views: 1 } }, // Atomic increment
+            { new: true } // Return updated document
+        );
+
+        if (!video) {
+            console.log("Video not found");
+            return res.status(404).json(new ApiError(404, "Video not found"));
+        }
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, "View count incremented successfully", { views: video.views })
+            );
+    } catch (error) {
+        console.error("Error incrementing view count:", error);
+        return res.status(500).json(
+            new ApiError(500, "Failed to increment view count", error)
+        );
+    }
+})
+
 export {
     getAllVideos,
     publishAVideo,
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    incrementView
 }
