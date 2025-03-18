@@ -111,18 +111,35 @@ const registerUser = asyncHandler(async (req, res) => {
             username: username.toLowerCase(),
         });
 
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
         // finally to ensure that the user is created in database, again querying, for the realibility
         const createdUser = await User.findById(user._id).select(
             "-password -refreshToken"
+            // -refreshToken
         )
 
         if (!createdUser) {
             throw new ApiError(500, "Something went wrong while registering the user.");
         }
 
+        // Set cookie options
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Strict"
+        };
+
         return res
             .status(201)
-            .json(new ApiResponse(200, createdUser, "User registered successfully"))
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json(new ApiResponse(200, {
+                user: createdUser,
+                accessToken,
+                refreshToken
+            }, "User registered successfully"));
+
     } catch (error) {
         console.log("User Creation failed.");
 
@@ -334,7 +351,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(new ApiResponse(200, req.user, "Current user details"))
-
+    // the user is verified after the 
 })
 
 

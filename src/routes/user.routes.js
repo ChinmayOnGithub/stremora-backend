@@ -42,12 +42,12 @@ router.route("/logout").post(verifyJWT, logoutUser)
 router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 router.route("/current-user").get(verifyJWT, getCurrentUser)
 
-router.route("/update-account").patch(verifyJWT, updateAccountDetails)
+router.route("/update-account").put(verifyJWT, updateAccountDetails)
 
-router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
+router.route("/update-avatar").put(verifyJWT, upload.single("avatar"), updateUserAvatar)
 
 
-router.route("/update-cover-image").patch(verifyJWT, upload.single("cover-image"), updateUserCoverImage)
+router.route("/update-cover-image").put(verifyJWT, upload.single("cover-image"), updateUserCoverImage)
 
 router.route("/history").get(verifyJWT, getWatchHistory)
 
