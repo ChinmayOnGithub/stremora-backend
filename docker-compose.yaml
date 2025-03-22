@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+    backend:
+        build: .
+        ports:
+            - "5000:8000" # Expose the backend API
+        env_file:
+            - .env # Load environment variables
+        volumes:
+            - .:/app # Mount project directory for live updates
+            - /app/node_modules # Ensure node_modules stays container-managed
+            - ./public:/app/public # Mount the public folder for persistence
+        restart: unless-stopped
