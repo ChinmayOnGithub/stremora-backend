@@ -1,10 +1,13 @@
-import { Router } from "express";
-import { healthcheck } from "../controllers/healthcheck.controller.js";
+import express from 'express';
+import { getHealthCheck, getReadinessCheck } from '../controllers/healthcheck.controller.js';
 
-const router = Router();
+const router = express.Router();
 // /api/v1/healthcheck/test
 
-router.route("/").get(healthcheck)
-// router.route("/test").get(healthcheck)
+// Main health check endpoint
+router.get('/', getHealthCheck);
+
+// Readiness probe
+router.get('/readiness', getReadinessCheck);
 
 export default router

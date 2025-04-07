@@ -381,6 +381,98 @@ const incrementView = asyncHandler(async (req, res) => {
     }
 })
 
+// Trending videos (most viewed)
+export const getTrendingVideos = asyncHandler(async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+
+    try {
+        const videos = await Video.aggregate([
+            { $sort: { views: -1, createdAt: -1 } },
+            { $limit: limit },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                    pipeline: [{ $project: { username: 1, avatar: 1 } }]
+                }
+            },
+            { $unwind: "$owner" }
+        ]);
+
+        if (!videos.length) {
+            return res.status(200).json(
+                new ApiResponse(200, [], "No trending videos found")
+            );
+        }
+
+        return res.status(200).json(
+            new ApiResponse(200, videos, "Trending videos fetched successfully")
+        );
+
+    } catch (error) {
+        console.error("Error fetching trending videos:", error);
+        return res.status(500).json(
+            new ApiError(500, "Failed to fetch trending videos", error)
+        );
+    }
+});
+
+// Recommended videos (custom logic example)
+export const getRecommendedVideos = asyncHandler(async (req, res) => {
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+    const skip = (page - 1) * limit;
+
+    const videos = await Video.aggregate([
+        {
+            $addFields: {
+                // Simplified scoring without likesCount
+                popularityScore: "$views",
+                recencyScore: {
+                    $divide: [
+                        { $subtract: [new Date(), "$createdAt"] },
+                        1000 * 60 * 60 * 24
+                    ]
+                }
+            }
+        },
+        {
+            $addFields: {
+                recommendationScore: {
+                    $subtract: [
+                        "$popularityScore",
+                        { $multiply: ["$recencyScore", 0.1] } // Favor newer videos slightly
+                    ]
+                }
+            }
+        },
+        { $sort: { recommendationScore: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [{ $project: { username: 1, avatar: 1 } }]
+            }
+        },
+        { $unwind: "$owner" }
+    ]);
+
+    const total = await Video.countDocuments();
+
+    res.status(200).json(new ApiResponse(200, {
+        videos,
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+    }, "Recommended videos fetched"));
+});
+
 export {
     getAllVideos,
     publishAVideo,

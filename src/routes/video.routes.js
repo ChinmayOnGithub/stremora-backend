@@ -8,6 +8,8 @@ import {
     publishAVideo,
     togglePublishStatus,
     updateVideo,
+    getTrendingVideos,
+    getRecommendedVideos,
 } from "../controllers/video.controller.js"
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -51,7 +53,8 @@ router.route("/toggle-published/:videoId").patch(
 router.route("/get-video").get(getAllVideos);
 router.route("/get-video-by-id/:videoId").get(getVideoById);
 router.route("/view/:videoId").put(incrementView);
-
+router.route("/trending").get(getTrendingVideos);
+router.route("/recommended").get(getRecommendedVideos);
 
 
 export default router
