@@ -13,26 +13,29 @@
     "type": "module",
     "main": "src/index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "node src/index.js",
-        "dev": "nodemon src/index.js",
-        "build": "echo 'No build step needed for Node.js'"
+        "dev": "bun --hot src/index.js",
+        "start": "bun src/index.js",
+        "build": "echo 'No build step needed for Bun'"
     },
     "devDependencies": {
-        "nodemon": "^3.1.9",
-        "prettier": "^3.4.2"
+        "@types/bun": "latest",
+        "prettier": "^3.5.3"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",
-        "cloudinary": "^2.5.1",
+        "cloudinary": "^2.6.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
-        "dotenv": "^16.4.7",
+        "dotenv": "^16.5.0",
         "express": "^4.21.2",
         "jsonwebtoken": "^9.0.2",
-        "mongoose": "^8.9.2",
-        "mongoose-aggregate-paginate-v2": "^1.1.2",
-        "multer": "^1.4.5-lts.1",
-        "sonner": "^2.0.1"
+        "mongoose": "^8.15.1",
+        "mongoose-aggregate-paginate-v2": "^1.1.4",
+        "multer": "^1.4.5-lts.2",
+        "sonner": "^2.0.5"
+    },
+    "private": true,
+    "peerDependencies": {
+        "typescript": "^5.8.3"
     }
 }
