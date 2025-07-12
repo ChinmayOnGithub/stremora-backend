@@ -6,15 +6,15 @@ import dotenv from 'dotenv';
 dotenv.config()
 // console.log("Cloudinary Config:", process.env.CLOUDINARY_CLOUD_NAME, process.env.CLOUDINARY_API_KEY, process.env.CLOUDINARY_API_SECRET);
 
-
-
 // confifure cloudinary
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    cloud_name: "dvukrn3hn",
+    api_key: "311746583244972",
+    api_secret: "_o6c_9a4LTAUHy6EqJ-1_MqZ2SE"
 });
+console.log("[Cloudinary] Config after setup:", cloudinary.config());
 
+export default cloudinary;
 
 const uploadOnCloudinary = async (localFilePath) => {
     try {
@@ -32,11 +32,19 @@ const uploadOnCloudinary = async (localFilePath) => {
         // Ensure the folder is always in the root directory
         folder = `/${folder}`;
 
-        const response = await cloudinary.uploader.upload(
-            localFilePath, {
+        const uploadOptions = {
             resource_type: "auto",
             folder: folder
-        });
+        };
+
+        console.log("[Cloudinary] Upload options:", uploadOptions);
+        console.log("[Cloudinary] File path:", localFilePath);
+        console.log("[Cloudinary] File exists:", fs.existsSync(localFilePath));
+        console.log("[Cloudinary] File size:", fs.statSync(localFilePath).size, "bytes");
+
+        const response = await cloudinary.uploader.upload(
+            localFilePath, uploadOptions
+        );
         console.log("File uploaded on cloudinary. File src: ", response.url);
         // once the file is uploaded, we want to delete it from our server.
         fs.unlinkSync(localFilePath);
@@ -45,8 +53,16 @@ const uploadOnCloudinary = async (localFilePath) => {
 
     } catch (error) {
         console.log("Error on Cloudinary", error);
+        console.log("[Cloudinary] Error details:", {
+            message: error.message,
+            http_code: error.http_code,
+            name: error.name
+        });
 
-        fs.unlinkSync(localFilePath);
+        // Only delete if file exists
+        if (fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
         return null;
     }
 }

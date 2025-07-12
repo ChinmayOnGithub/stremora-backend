@@ -8,7 +8,7 @@ import {
     uploadOnCloudinary,
     deleteFromCloudinary
 } from "../utils/cloudinary.js"
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from '../utils/cloudinary.js';
 import { Like } from '../models/like.models.js';
 
 
@@ -172,6 +172,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
     if (!videoLocalPath) {
         return res.status(404).json(new ApiError(404, "Video file is required"));
     }
+    // Debug logs for Cloudinary config and file existence
+    const fs = await import('fs');
+    console.log("[Cloudinary] Config at video upload:", cloudinary.config());
+    console.log("[Cloudinary] Video file path:", videoLocalPath, "Exists:", fs.existsSync(videoLocalPath));
     let videoCloudinary = null;
     try {
         videoCloudinary = await uploadOnCloudinary(videoLocalPath)
@@ -208,6 +212,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     let thumbnail;
     if (thumbnailLocalPath) {
         try {
+            console.log("[Cloudinary] Thumbnail file path:", thumbnailLocalPath, "Exists:", fs.existsSync(thumbnailLocalPath));
             thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
         } catch (error) {
             console.log("Error uploading thumbnail!", error);
@@ -216,6 +221,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     } else {
         // 🌟 Auto-Generate a Thumbnail from the Video at 2 Seconds Using Cloudinary API 🌟
         try {
+            console.log("[Cloudinary] Config at thumbnail generation:", cloudinary.config());
             const thumbnailResponse = await cloudinary.uploader.explicit(videoCloudinary.public_id, {
                 resource_type: "video",
                 type: "upload",
