@@ -11,8 +11,6 @@ import {
 import { v2 as cloudinary } from 'cloudinary';
 
 
-
-
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy = 'createdAt', sortType = 'desc', userId } = req.query;
 
@@ -473,6 +471,37 @@ export const getRecommendedVideos = asyncHandler(async (req, res) => {
     }, "Recommended videos fetched"));
 });
 
+// Modular function for channel video queries
+const getChannelVideosBySort = (sortField, sortOrder) => asyncHandler(async (req, res) => {
+    const { channelId } = req.params;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+    const skip = (page - 1) * limit;
+
+    if (!channelId) {
+        return res.status(400).json(new ApiError(400, "Channel ID is required"));
+    }
+
+    const filter = { owner: channelId, isPublished: true };
+    const total = await Video.countDocuments(filter);
+    const videos = await Video.find(filter)
+        .sort({ [sortField]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .populate('owner', 'username avatar');
+
+    return res.status(200).json(new ApiResponse(200, {
+        videos,
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+    }, `Channel videos sorted by ${sortField} (${sortOrder > 0 ? 'asc' : 'desc'})`));
+});
+
+const getChannelPopularVideos = getChannelVideosBySort('views', -1); // Most popular
+const getChannelLatestVideos = getChannelVideosBySort('createdAt', -1); // Latest
+const getChannelOldestVideos = getChannelVideosBySort('createdAt', 1); // Oldest
+
 export {
     getAllVideos,
     publishAVideo,
@@ -480,5 +509,8 @@ export {
     updateVideo,
     deleteVideo,
     togglePublishStatus,
-    incrementView
+    incrementView,
+    getChannelPopularVideos,
+    getChannelLatestVideos,
+    getChannelOldestVideos
 }
