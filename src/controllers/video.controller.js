@@ -9,6 +9,7 @@ import {
     deleteFromCloudinary
 } from "../utils/cloudinary.js"
 import { v2 as cloudinary } from 'cloudinary';
+import { Like } from '../models/like.models.js';
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -48,15 +49,92 @@ const getAllVideos = asyncHandler(async (req, res) => {
         // Count total videos that match the filter
         const totalVideosCount = await Video.countDocuments(filter);
 
-
-        // using pagination while getting data from database
-        const videos = await Video
+        // Get videos with pagination
+        let videos = await Video
             .find(filter)
             .sort({ [sortBy]: sortType === 'desc' ? -1 : 1 })
             .skip((page - 1) * limit) // skip prev pages
             .limit(limit) // limits number of documents in one page
             .populate('owner', 'username email avatar'); // Fetch owner's name, email, and avatar
 
+        // If user is authenticated, add like information
+        if (req.user?._id) {
+            console.log("User authenticated, checking likes for user:", req.user._id);
+            console.log("Videos to check:", videos.map(v => v._id));
+
+            // Get like counts for all videos
+            const likeCounts = await Like.aggregate([
+                {
+                    $match: {
+                        video: { $in: videos.map(v => v._id) }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$video",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            console.log("Like counts found:", likeCounts);
+
+            // Get user's likes for these videos
+            const userLikes = await Like.find({
+                video: { $in: videos.map(v => v._id) },
+                likedBy: req.user._id
+            }).select('video');
+
+            console.log("User likes found:", userLikes);
+
+            // Create lookup maps
+            const likeCountMap = {};
+            likeCounts.forEach(item => {
+                likeCountMap[item._id.toString()] = item.count;
+            });
+
+            const userLikesSet = new Set(userLikes.map(like => like.video.toString()));
+
+            console.log("Like count map:", likeCountMap);
+            console.log("User likes set:", Array.from(userLikesSet));
+
+            // Add like information to videos
+            videos = videos.map(video => {
+                const videoObj = video.toObject();
+                videoObj.likeCount = likeCountMap[video._id.toString()] || 0;
+                videoObj.isLiked = userLikesSet.has(video._id.toString());
+                console.log(`Video ${video._id}: likeCount=${videoObj.likeCount}, isLiked=${videoObj.isLiked}`);
+                return videoObj;
+            });
+        } else {
+            console.log("No authenticated user, skipping like information");
+            // For non-authenticated users, just add like counts
+            const likeCounts = await Like.aggregate([
+                {
+                    $match: {
+                        video: { $in: videos.map(v => v._id) }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$video",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            const likeCountMap = {};
+            likeCounts.forEach(item => {
+                likeCountMap[item._id.toString()] = item.count;
+            });
+
+            videos = videos.map(video => {
+                const videoObj = video.toObject();
+                videoObj.likeCount = likeCountMap[video._id.toString()] || 0;
+                videoObj.isLiked = false;
+                return videoObj;
+            });
+        }
 
         return res
             .status(200)
@@ -199,14 +277,33 @@ const getVideoById = asyncHandler(async (req, res) => {
         const video = await Video.findById(videoId)
             .populate('owner', 'username email avatar'); // Fetch owner's name, email, and avatar
 
-
         if (!video) {
             console.log("Video not found");
             return res.status(404).json(new ApiError(404, "Video not found"));
         }
+
+        // Convert to object for modification
+        let videoObj = video.toObject();
+
+        // Get like count
+        const likeCount = await Like.countDocuments({ video: videoId });
+        videoObj.likeCount = likeCount;
+
+        // Check if user has liked this video
+        if (req.user?._id) {
+            const userLike = await Like.findOne({
+                video: videoId,
+                likedBy: req.user._id
+            });
+            videoObj.isLiked = !!userLike;
+            console.log(`Video ${videoId}: isLiked=${videoObj.isLiked}, likeCount=${videoObj.likeCount}`);
+        } else {
+            videoObj.isLiked = false;
+        }
+
         return res
             .status(200)
-            .json(new ApiResponse(200, "Fetched video by ID successfully", video));
+            .json(new ApiResponse(200, "Fetched video by ID successfully", videoObj));
     } catch (error) {
         console.log("Error while finding the video", error);
         return res
@@ -484,11 +581,78 @@ const getChannelVideosBySort = (sortField, sortOrder) => asyncHandler(async (req
 
     const filter = { owner: channelId, isPublished: true };
     const total = await Video.countDocuments(filter);
-    const videos = await Video.find(filter)
+    let videos = await Video.find(filter)
         .sort({ [sortField]: sortOrder })
         .skip(skip)
         .limit(limit)
         .populate('owner', 'username avatar');
+
+    // Add like information
+    if (req.user?._id) {
+        // Get like counts for all videos
+        const likeCounts = await Like.aggregate([
+            {
+                $match: {
+                    video: { $in: videos.map(v => v._id) }
+                }
+            },
+            {
+                $group: {
+                    _id: "$video",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Get user's likes for these videos
+        const userLikes = await Like.find({
+            video: { $in: videos.map(v => v._id) },
+            likedBy: req.user._id
+        }).select('video');
+
+        // Create lookup maps
+        const likeCountMap = {};
+        likeCounts.forEach(item => {
+            likeCountMap[item._id.toString()] = item.count;
+        });
+
+        const userLikesSet = new Set(userLikes.map(like => like.video.toString()));
+
+        // Add like information to videos
+        videos = videos.map(video => {
+            const videoObj = video.toObject();
+            videoObj.likeCount = likeCountMap[video._id.toString()] || 0;
+            videoObj.isLiked = userLikesSet.has(video._id.toString());
+            return videoObj;
+        });
+    } else {
+        // For non-authenticated users, just add like counts
+        const likeCounts = await Like.aggregate([
+            {
+                $match: {
+                    video: { $in: videos.map(v => v._id) }
+                }
+            },
+            {
+                $group: {
+                    _id: "$video",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const likeCountMap = {};
+        likeCounts.forEach(item => {
+            likeCountMap[item._id.toString()] = item.count;
+        });
+
+        videos = videos.map(video => {
+            const videoObj = video.toObject();
+            videoObj.likeCount = likeCountMap[video._id.toString()] || 0;
+            videoObj.isLiked = false;
+            return videoObj;
+        });
+    }
 
     return res.status(200).json(new ApiResponse(200, {
         videos,

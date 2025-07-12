@@ -4,11 +4,12 @@ import {
   toggleVideoLike,
   toggleCommentLike,
   toggleTweetLike,
-  getLikedVideos
+  getLikedVideos,
+  getAllLikes,
+  checkLikeStatus
 } from "../controllers/like.controller.js"
 import { upload } from "../middlewares/multer.middleware.js";
 import { getAllVideos } from "../controllers/video.controller.js";
-
 
 const router = Router();
 
@@ -17,5 +18,7 @@ router.route("/toggle-video-like/:videoId").post(verifyJWT, toggleVideoLike)
 router.route("/toggle-comment-like/:commentId").post(verifyJWT, toggleCommentLike)
 router.route("/toggle-tweet-like/:tweetId").post(verifyJWT, toggleTweetLike)
 router.route("/get-liked-videos").get(verifyJWT, getLikedVideos)
+router.route("/check-like").get(verifyJWT, checkLikeStatus)
+router.route("/debug/all-likes").get(getAllLikes) // Debug route (no auth required)
 
 export default router
