@@ -10,7 +10,6 @@ import {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getWatchHistory
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from '../middlewares/auth.middleware.js';
@@ -48,8 +47,6 @@ router.route("/update-avatar").put(verifyJWT, upload.single("avatar"), updateUse
 
 
 router.route("/update-cover-image").put(verifyJWT, upload.single("cover-image"), updateUserCoverImage)
-
-router.route("/history").get(verifyJWT, getWatchHistory)
 
 
 export default router

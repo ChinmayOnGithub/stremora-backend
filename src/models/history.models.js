@@ -13,6 +13,10 @@ const historySchema = new Schema({
     required: true,
     index: true
   },
+  viewCount: {
+    type: Number,
+    default: 1
+  },
   watchedAt: {
     type: Date,
     default: Date.now,

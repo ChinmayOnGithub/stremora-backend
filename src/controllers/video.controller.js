@@ -10,6 +10,7 @@ import {
 } from "../utils/cloudinary.js"
 import cloudinary from '../utils/cloudinary.js';
 import { Like } from '../models/like.models.js';
+import History from '../models/history.models.js';
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -59,9 +60,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
         // If user is authenticated, add like information
         if (req.user?._id) {
-            console.log("User authenticated, checking likes for user:", req.user._id);
-            console.log("Videos to check:", videos.map(v => v._id));
-
             // Get like counts for all videos
             const likeCounts = await Like.aggregate([
                 {
@@ -77,15 +75,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 }
             ]);
 
-            console.log("Like counts found:", likeCounts);
-
             // Get user's likes for these videos
             const userLikes = await Like.find({
                 video: { $in: videos.map(v => v._id) },
                 likedBy: req.user._id
             }).select('video');
-
-            console.log("User likes found:", userLikes);
 
             // Create lookup maps
             const likeCountMap = {};
@@ -95,19 +89,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
             const userLikesSet = new Set(userLikes.map(like => like.video.toString()));
 
-            console.log("Like count map:", likeCountMap);
-            console.log("User likes set:", Array.from(userLikesSet));
-
             // Add like information to videos
             videos = videos.map(video => {
                 const videoObj = video.toObject();
                 videoObj.likeCount = likeCountMap[video._id.toString()] || 0;
                 videoObj.isLiked = userLikesSet.has(video._id.toString());
-                console.log(`Video ${video._id}: likeCount=${videoObj.likeCount}, isLiked=${videoObj.isLiked}`);
                 return videoObj;
             });
         } else {
-            console.log("No authenticated user, skipping like information");
             // For non-authenticated users, just add like counts
             const likeCounts = await Like.aggregate([
                 {
@@ -449,38 +438,66 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 });
 
 
-const incrementView = asyncHandler(async (req, res) => {
+const viewVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
-
-    if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
-        console.log("Invalid videoId");
-        return res.status(400).json(new ApiError(400, "Valid Video ID is required"));
+    const { position = 0, duration = 0 } = req.body;
+    if (!req.user || !req.user._id) {
+        // Only log critical auth errors
+        console.warn("VIEW VIDEO: Unauthenticated request attempt");
+        throw new ApiError(401, "Unauthorized access");
     }
-
+    if (!mongoose.Types.ObjectId.isValid(videoId)) {
+        // Only log critical ID errors
+        console.error(`VIEW VIDEO: Invalid video ID format: ${videoId}`);
+        throw new ApiError(400, "Invalid video ID format");
+    }
     try {
-        const video = await Video.findByIdAndUpdate(
-            videoId,
-            { $inc: { views: 1 } }, // Atomic increment
-            { new: true } // Return updated document
-        );
-
+        const video = await Video.findById(videoId);
         if (!video) {
-            console.log("Video not found");
-            return res.status(404).json(new ApiError(404, "Video not found"));
+            // Only log if video not found
+            console.warn(`VIEW VIDEO: Video not found: ${videoId}`);
+            throw new ApiError(404, "Video not found");
         }
-
-        return res
-            .status(200)
-            .json(
-                new ApiResponse(200, "View count incremented successfully", { views: video.views })
+        video.views += 1;
+        await video.save();
+        // Log only successful view count increment
+        // console.info(`VIEW VIDEO: Incremented views for video ${videoId}`);
+        try {
+            const completed = duration > 0 && (position / duration) > 0.8;
+            await History.findOneAndUpdate(
+                { video: videoId, user: req.user._id },
+                {
+                    $set: {
+                        watched: true,
+                        lastWatched: new Date(),
+                        lastPosition: position,
+                        watchDuration: duration,
+                        completed,
+                        watchedAt: new Date(),
+                        updatedAt: new Date()
+                    },
+                    $inc: { viewCount: 1 }
+                },
+                { upsert: true, new: true }
             );
+            // Only log on critical error
+        } catch (historyError) {
+            console.error("HISTORY UPDATE ERROR:", historyError);
+        }
+        return res.status(200).json(new ApiResponse(200, "View counted successfully"));
     } catch (error) {
-        console.error("Error incrementing view count:", error);
-        return res.status(500).json(
-            new ApiError(500, "Failed to increment view count", error)
-        );
+        // Only log critical errors
+        console.error("VIEW VIDEO ERROR:", {
+            videoId,
+            user: req.user?._id,
+            error: error.message,
+            stack: error.stack
+        });
+        const statusCode = error.statusCode || 500;
+        const message = error.message || "Internal server error";
+        throw new ApiError(statusCode, message);
     }
-})
+});
 
 // Trending videos (most viewed)
 export const getTrendingVideos = asyncHandler(async (req, res) => {
@@ -679,7 +696,7 @@ export {
     updateVideo,
     deleteVideo,
     togglePublishStatus,
-    incrementView,
+    viewVideo as incrementView,
     getChannelPopularVideos,
     getChannelLatestVideos,
     getChannelOldestVideos

@@ -55,7 +55,7 @@ router.route("/toggle-published/:videoId").patch(
 // routes accessed by anyone
 router.route("/get-video").get(getAllVideos);
 router.route("/get-video-by-id/:videoId").get(getVideoById);
-router.route("/view/:videoId").put(incrementView);
+router.route("/view/:videoId").put(verifyJWT, incrementView);
 router.route("/trending").get(getTrendingVideos);
 router.route("/recommended").get(getRecommendedVideos);
 

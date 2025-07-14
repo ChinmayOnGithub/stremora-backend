@@ -10,8 +10,10 @@ const getVideoComments = asyncHandler(async (req, res) => {
   const { parentType } = req.query; // "Video" or "Tweet"
   const { page = 1, limit = 10 } = req.query; // used for pagination. Only limited numbers of comments will be loaded
 
-  console.log("Received Params:", req.params);
-  console.log("Received Query:", req.query);
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Received Params:", req.params);
+    console.log("Received Query:", req.query);
+  }
 
 
   if (!parentId || !isValidObjectId(parentId)) {
