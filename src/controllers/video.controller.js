@@ -6,7 +6,8 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import { mongoose } from 'mongoose';
 import {
     uploadOnCloudinary,
-    deleteFromCloudinary
+    deleteFromCloudinary,
+    isVideoMimetype
 } from "../utils/cloudinary.js"
 import cloudinary from '../utils/cloudinary.js';
 import { Like } from '../models/like.models.js';
@@ -142,7 +143,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body
-    // // TODO: get video, upload to cloudinary, create video
     // Validate user input
     if (!title?.trim()) {
         return res.status(400).json(new ApiError(400, "Title is required"));
@@ -158,107 +158,99 @@ const publishAVideo = asyncHandler(async (req, res) => {
     // lets handle the video upload part
     let videoLocalPath = req.files?.videoFile?.[0]?.path;
     let thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+    const videoFile = req.files?.videoFile?.[0];
     if (!videoLocalPath) {
         return res.status(404).json(new ApiError(404, "Video file is required"));
+    }
+    // Validate mimetype
+    if (!isVideoMimetype(videoFile?.mimetype)) {
+        return res.status(400).json(new ApiError(400, "Invalid video format"));
     }
     // Debug logs for Cloudinary config and file existence
     const fs = await import('fs');
     console.log("[Cloudinary] Config at video upload:", cloudinary.config());
     console.log("[Cloudinary] Video file path:", videoLocalPath, "Exists:", fs.existsSync(videoLocalPath));
     let videoCloudinary = null;
+    // Helper cleanup function
+    const cleanup = async () => {
+        if (videoCloudinary?.public_id) {
+            await deleteFromCloudinary(videoCloudinary.public_id);
+        }
+    };
     try {
-        videoCloudinary = await uploadOnCloudinary(videoLocalPath)
+        // Increase timeout for large videos
+        videoCloudinary = await uploadOnCloudinary(videoLocalPath, videoFile?.mimetype, { timeout: 60000 });
+        if (!videoCloudinary || !videoCloudinary.duration) {
+            await cleanup();
+            throw new ApiError(500, "Video upload failed or missing metadata");
+        }
     } catch (error) {
         console.log("Error uploading video!.", error);
+        await cleanup();
         throw new ApiError(500, "Failed to upload video file");
     }
-    // now that the video uploaded to the cloudanary 
-    // lets create a video with all the components and link and store it in the datebase
+    // now that the video uploaded to the cloudinary 
+    // lets create a video with all the components and link and store it in the database
     console.log("Video Cloudinary Response:", videoCloudinary);
-    const minutes = Math.floor((videoCloudinary.duration % 3600) / 60);
-    const seconds = Math.floor(videoCloudinary.duration % 60);
-    const videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`; // Ensures `0:5` → `0:05`
-
+    const duration = videoCloudinary.duration || 0;
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = Math.floor(duration % 60);
+    const videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
     // Thumbnail is optional
-    // Handle Thumbnail (If User Uploads One)
-    // implecit creation
-    // let thumbnail;
-    // if (thumbnailLocalPath) {
-    //     try {
-    //         thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
-    //     } catch (error) {
-    //         console.log("Error uploading thumbnail!", error);
-    //         throw new ApiError(500, "Failed to upload thumbnail file");
-    //     }
-    // } else {
-    //     // Auto-Generate a Thumbnail from the Video at 2 Seconds
-    //     thumbnail = {
-    //         url: videoCloudinary.url.replace("/upload/", "/upload/so_2,w_300,h_200,c_fill/") + ".jpg"
-    //     };
-    // }
-
     let thumbnail;
     if (thumbnailLocalPath) {
         try {
             console.log("[Cloudinary] Thumbnail file path:", thumbnailLocalPath, "Exists:", fs.existsSync(thumbnailLocalPath));
-            thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+            const thumbnailFile = req.files?.thumbnail?.[0];
+            thumbnail = await uploadOnCloudinary(thumbnailLocalPath, thumbnailFile?.mimetype);
         } catch (error) {
             console.log("Error uploading thumbnail!", error);
+            await cleanup();
             throw new ApiError(500, "Failed to upload thumbnail file");
         }
     } else {
-        // 🌟 Auto-Generate a Thumbnail from the Video at 2 Seconds Using Cloudinary API 🌟
+        // Auto-Generate a Thumbnail from the Video at 2 Seconds using Cloudinary URL transformation
         try {
-            console.log("[Cloudinary] Config at thumbnail generation:", cloudinary.config());
-            const thumbnailResponse = await cloudinary.uploader.explicit(videoCloudinary.public_id, {
+            const thumbnailUrl = cloudinary.url(videoCloudinary.public_id, {
                 resource_type: "video",
-                type: "upload",
-                eager: [{ format: "jpg", transformation: [{ width: 300, height: 200, crop: "fill", start_offset: "2" }] }],
+                transformation: [
+                    { width: 300, height: 200, crop: "fill" },
+                    { start_offset: "2" },
+                    { format: "jpg" }
+                ]
             });
-
-            thumbnail = {
-                url: thumbnailResponse.eager[0].secure_url, // Extract generated thumbnail URL
-            };
+            thumbnail = { url: thumbnailUrl };
         } catch (error) {
-            console.log("Error generating video thumbnail!", error);
-            thumbnail = { url: "" }; // Fallback to empty if thumbnail generation fails
+            console.error("Thumbnail generation failed:", error);
+            thumbnail = { url: "" };
         }
     }
 
     try {
-
         const video = new Video({
-            videoFile: videoCloudinary.url, // need to mention url becuase the videoCloudinary is actually an Object
+            videoFile: videoCloudinary.url,
             thumbnail: thumbnail?.url || "",
             title,
             description,
             duration: videoDuration || '0',
             owner: user._id
         });
-
         const publishedVideo = await video.save();
         console.log(video);
-
         if (!publishedVideo) {
+            await cleanup();
             throw new ApiError(500, "Something went wrong while publishing the video.");
         }
-
         return res
             .status(200)
-            .json(new ApiResponse(200, "Successfully published video", publishedVideo))
-
+            .json(new ApiResponse(200, "Successfully published video", publishedVideo));
     } catch (error) {
         console.log("Video creation failed.", error);
-        if (videoCloudinary) {
-            await deleteFromCloudinary(videoCloudinary.public_id)
-        }
-        if (thumbnail) {
-            await deleteFromCloudinary(thumbnail.public_id)
-        }
+        await cleanup();
         throw new ApiError(500, "Something went wrong while publishing the video and files were deleted");
     }
-})
+});
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params; // params are taken from the :videoId from url itself
@@ -338,7 +330,7 @@ const updateVideo = asyncHandler(async (req, res) => {
             }
 
             // Upload the new thumbnail to Cloudinary
-            thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+            thumbnail = await uploadOnCloudinary(thumbnailLocalPath, req.files?.thumbnail?.[0]?.mimetype);
         } catch (error) {
             return res.status(500).json(new ApiError(500, "Error while uploading the thumbnail!"));
         }
@@ -689,6 +681,81 @@ const getChannelPopularVideos = getChannelVideosBySort('views', -1); // Most pop
 const getChannelLatestVideos = getChannelVideosBySort('createdAt', -1); // Latest
 const getChannelOldestVideos = getChannelVideosBySort('createdAt', 1); // Oldest
 
+// Get all videos uploaded by the currently authenticated user ("My Videos" dashboard)
+const getMyVideos = asyncHandler(async (req, res) => {
+    const userId = req.user?._id;
+    const { page = 1, limit = 20, sortBy = 'createdAt', sortType = 'desc', query } = req.query;
+
+    if (!userId) {
+        return res.status(401).json(new ApiError(401, "User not authenticated!"));
+    }
+
+    const filter = { owner: userId };
+    if (query) {
+        filter.$or = [
+            { title: { $regex: query, $options: 'i' } },
+            { description: { $regex: query, $options: 'i' } }
+        ];
+    }
+
+    try {
+        const totalVideosCount = await Video.countDocuments(filter);
+        let videos = await Video
+            .find(filter)
+            .sort({ [sortBy]: sortType === 'desc' ? -1 : 1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .populate('owner', 'username email avatar');
+
+        // Get like counts for all videos
+        const likeCounts = await Like.aggregate([
+            { $match: { video: { $in: videos.map(v => v._id) } } },
+            { $group: { _id: "$video", count: { $sum: 1 } } }
+        ]);
+        const likeCountMap = {};
+        likeCounts.forEach(item => {
+            likeCountMap[item._id.toString()] = item.count;
+        });
+
+        // Get comment counts for all videos
+        // (Assuming you have a Comment model and video field)
+        let commentCountMap = {};
+        try {
+            const Comment = (await import('../models/comment.models.js')).Comment;
+            const commentCounts = await Comment.aggregate([
+                { $match: { parent: { $in: videos.map(v => v._id) }, parentType: "Video" } },
+                { $group: { _id: "$parent", count: { $sum: 1 } } }
+            ]);
+            commentCounts.forEach(item => {
+                commentCountMap[item._id.toString()] = item.count;
+            });
+        } catch (e) {
+            // If comment model not found, skip
+        }
+
+        videos = videos.map(video => {
+            const videoObj = video.toObject();
+            videoObj.likeCount = likeCountMap[video._id.toString()] || 0;
+            videoObj.commentCount = commentCountMap[video._id.toString()] || 0;
+            return videoObj;
+        });
+
+        return res.status(200).json(new ApiResponse(200, "My videos fetched successfully", {
+            totalVideosCount,
+            videos,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(totalVideosCount / limit),
+                totalItems: totalVideosCount,
+                itemsPerPage: parseInt(limit)
+            }
+        }));
+    } catch (err) {
+        console.error("Error fetching my videos:", err);
+        return res.status(500).json(new ApiError(500, "Something went wrong while fetching your videos", err));
+    }
+});
+
 export {
     getAllVideos,
     publishAVideo,
@@ -699,5 +766,6 @@ export {
     viewVideo as incrementView,
     getChannelPopularVideos,
     getChannelLatestVideos,
-    getChannelOldestVideos
+    getChannelOldestVideos,
+    getMyVideos // <-- export new controller
 }

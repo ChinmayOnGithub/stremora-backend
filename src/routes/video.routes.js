@@ -13,6 +13,7 @@ import {
     getChannelPopularVideos,
     getChannelLatestVideos,
     getChannelOldestVideos,
+    getMyVideos,
 } from "../controllers/video.controller.js"
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -63,6 +64,9 @@ router.route("/recommended").get(getRecommendedVideos);
 router.route("/channel/:channelId/popular").get(getChannelPopularVideos);
 router.route("/channel/:channelId/latest").get(getChannelLatestVideos);
 router.route("/channel/:channelId/oldest").get(getChannelOldestVideos);
+
+// Add route for fetching current user's videos (My Videos dashboard)
+router.route("/my-videos").get(verifyJWT, getMyVideos);
 
 
 export default router

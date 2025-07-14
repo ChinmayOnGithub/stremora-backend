@@ -1,78 +1,69 @@
 import { v2 as cloudinary } from 'cloudinary';
 import fs from "fs";
-
 import dotenv from 'dotenv';
 
-dotenv.config()
-// console.log("Cloudinary Config:", process.env.CLOUDINARY_CLOUD_NAME, process.env.CLOUDINARY_API_KEY, process.env.CLOUDINARY_API_SECRET);
+dotenv.config();
 
-// confifure cloudinary
+// Config assertion for Cloudinary env vars
+console.assert(process.env.CLOUDINARY_CLOUD_NAME, "Missing Cloudinary CLOUD_NAME");
+console.assert(process.env.CLOUDINARY_API_KEY, "Missing Cloudinary API_KEY");
+console.assert(process.env.CLOUDINARY_API_SECRET, "Missing Cloudinary API_SECRET");
+
+// configure cloudinary
 cloudinary.config({
-    cloud_name: "dvukrn3hn",
-    api_key: "311746583244972",
-    api_secret: "_o6c_9a4LTAUHy6EqJ-1_MqZ2SE"
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 console.log("[Cloudinary] Config after setup:", cloudinary.config());
 
 export default cloudinary;
 
-const uploadOnCloudinary = async (localFilePath) => {
+// Helper: Validate mimetype
+export function isVideoMimetype(mimetype) {
+    return mimetype && mimetype.startsWith("video/");
+}
+
+// Robust upload function with timeout and error handling
+// Now detects file type and sets resource_type/folder accordingly
+const uploadOnCloudinary = async (localFilePath, mimetype = "", options = {}) => {
     try {
-        if (!localFilePath) return null;
-
-        // Determine the folder based on file extension
-        const fileExtension = localFilePath.split('.').pop();
-        let folder = 'others';
-        if (fileExtension === 'jpg' || fileExtension === 'png' || fileExtension === 'jpeg') {
-            folder = 'thumbnail';
-        } else if (fileExtension === 'mp4' || fileExtension === 'avi' || fileExtension === 'mkv' || fileExtension === 'webm') {
-            folder = 'videos';
+        if (!localFilePath || !fs.existsSync(localFilePath)) {
+            throw new Error("File does not exist: " + localFilePath);
         }
-
-        // Ensure the folder is always in the root directory
-        folder = `/${folder}`;
-
+        // Detect file type
+        let resource_type = "raw";
+        let folder = "others";
+        if (mimetype.startsWith("image/")) {
+            resource_type = "image";
+            folder = "images";
+        } else if (mimetype.startsWith("video/")) {
+            resource_type = "video";
+            folder = "videos";
+        } else if (mimetype === "application/pdf" || localFilePath.endsWith(".pdf")) {
+            resource_type = "raw";
+            folder = "pdfs";
+        }
+        // Always public
         const uploadOptions = {
-            resource_type: "auto",
-            folder: folder
+            resource_type,
+            folder,
+            access_mode: "public",
+            ...options
         };
-
         console.log("[Cloudinary] Upload options:", uploadOptions);
-        console.log("[Cloudinary] File path:", localFilePath);
-        console.log("[Cloudinary] File exists:", fs.existsSync(localFilePath));
-        console.log("[Cloudinary] File size:", fs.statSync(localFilePath).size, "bytes");
-
-        const response = await cloudinary.uploader.upload(
-            localFilePath, uploadOptions
-        );
-        console.log("File uploaded on cloudinary. File src: ", response.url);
-        // once the file is uploaded, we want to delete it from our server.
+        const response = await cloudinary.uploader.upload(localFilePath, uploadOptions);
         fs.unlinkSync(localFilePath);
-
         return response;
-
     } catch (error) {
         console.log("Error on Cloudinary", error);
-        console.log("[Cloudinary] Error details:", {
-            message: error.message,
-            http_code: error.http_code,
-            name: error.name
-        });
-
-        // Only delete if file exists
-        if (fs.existsSync(localFilePath)) {
-            fs.unlinkSync(localFilePath);
-        }
+        if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
         return null;
     }
 }
 
 const deleteFromCloudinary = async (identifier) => {
     try {
-
-        // Normally i get the full url and not only public_id
-        // so i need to split the url to get the public_id
-
         // Extract publicId if the identifier is a full URL
         let publicId = identifier;
         if (identifier.startsWith("http")) {
@@ -80,28 +71,22 @@ const deleteFromCloudinary = async (identifier) => {
             const publicIdWithExtension = parts[parts.length - 1]; // e.g., "jy68d0ndnmmktxh3rvan.jpg"
             publicId = publicIdWithExtension.split(".")[0]; // Remove the file extension
         }
-
         // File could be at any location
-
         console.log("attempting to delete the image: ", publicId);
         // Attempt to delete from videos folder
         const resultVideo = await cloudinary.uploader.destroy(`videos/${publicId}`, { resource_type: "video" });
         console.log("Deleted from cloudinary videos. publicId: ", publicId);
-
         // Attempt to delete from thumbnails folder
         const resultThumbnail = await cloudinary.uploader.destroy(`thumbnail/${publicId}`);
         console.log("Deleted from cloudinary thumbnails. publicId: ", publicId);
-
         // Attempt to delete from root folder
         const resultRoot = await cloudinary.uploader.destroy(publicId);
         console.log("Deleted from cloudinary root. publicId: ", publicId);
-
         return { resultThumbnail, resultVideo, resultRoot };
-
     } catch (error) {
         console.log("Error deleting from cloudinary", error);
         return null;
     }
 }
 
-export { uploadOnCloudinary, deleteFromCloudinary }
+export { uploadOnCloudinary, deleteFromCloudinary };
