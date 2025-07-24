@@ -15,9 +15,11 @@
     "scripts": {
         "dev": "bun --hot src/index.js",
         "start": "bun src/index.js",
-        "build": "echo 'No build step needed for Bun'"
+        "build": "echo 'No build step needed for Bun'",
+        "lint": "eslint ."
     },
     "devDependencies": {
+        "@eslint/js": "^9.31.0",
         "@types/bun": "^1.2.18",
         "prettier": "^3.6.2"
     },
@@ -27,6 +29,7 @@
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
         "dotenv": "^17.2.0",
+        "eslint": "^9.31.0",
         "express": "^5.1.0",
         "jsonwebtoken": "^9.0.2",
         "mongoose": "^8.16.3",

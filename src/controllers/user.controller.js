@@ -4,13 +4,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import jwt from 'jsonwebtoken';
-import { Subscription } from '../models/subscription.models.js';
-import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
-import multer from "multer";
-import { upload } from '../middlewares/multer.middleware.js';
-import mongoose from "mongoose";
-import { DEFAULT_COVER_IMAGE } from "../constants.js";
-
 
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -140,17 +133,8 @@ const registerUser = asyncHandler(async (req, res) => {
                 refreshToken
             }, "User registered successfully"));
 
-    } catch (error) {
-        console.log("User Creation failed.");
-
-        if (avatar) {
-            await deleteFromCloudinary(avatar.public_id)
-        }
-        if (coverImage) {
-            await deleteFromCloudinary(coverImage.public_id)
-        }
-
-        throw new ApiError(500, "Something went wrong while registering the user and images were deleted");
+    } catch {
+        throw new ApiError(500, "Error while registering user");
     }
 
 

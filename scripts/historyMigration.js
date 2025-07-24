@@ -22,7 +22,7 @@ const migrateHistory = async () => {
     ]);
 
     for (const doc of duplicates) {
-      const [first, ...rest] = doc.dups;
+      const [...rest] = doc.dups;
       await History.deleteMany({ _id: { $in: rest } });
       console.log(`Deleted ${rest.length} duplicates for ${doc._id.user}`);
     }

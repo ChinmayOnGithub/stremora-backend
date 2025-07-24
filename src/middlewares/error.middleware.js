@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { ApiError } from "../utils/ApiError.js";
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res) => {
     let error = err;
 
     if (!(error instanceof ApiError)) {

@@ -2,9 +2,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import History from "../models/history.models.js";
-import { Video } from "../models/video.models.js";
-import { User } from "../models/user.models.js";
-import { Like } from "../models/like.models.js";
 import mongoose from "mongoose";
 
 // Get user's watch history (simplified version)

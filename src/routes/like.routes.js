@@ -8,8 +8,6 @@ import {
   getAllLikes,
   checkLikeStatus
 } from "../controllers/like.controller.js"
-import { upload } from "../middlewares/multer.middleware.js";
-import { getAllVideos } from "../controllers/video.controller.js";
 
 const router = Router();
 

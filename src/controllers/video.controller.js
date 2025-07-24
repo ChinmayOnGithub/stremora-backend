@@ -245,10 +245,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(new ApiResponse(200, "Successfully published video", publishedVideo));
-    } catch (error) {
-        console.log("Video creation failed.", error);
-        await cleanup();
-        throw new ApiError(500, "Something went wrong while publishing the video and files were deleted");
+    } catch {
+        return res.status(500).json(new ApiError(500, "Error while publishing video"));
     }
 });
 
@@ -331,7 +329,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 
             // Upload the new thumbnail to Cloudinary
             thumbnail = await uploadOnCloudinary(thumbnailLocalPath, req.files?.thumbnail?.[0]?.mimetype);
-        } catch (error) {
+        } catch {
             return res.status(500).json(new ApiError(500, "Error while uploading the thumbnail!"));
         }
     }
@@ -353,10 +351,8 @@ const updateVideo = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(new ApiResponse(200, "Updated video details successfully", video))
-    } catch (error) {
-        console.log("couldnt update the details");
-
-        return res.status(500).json(new ApiError(404, "Error while updating the video details"))
+    } catch {
+        return res.status(500).json(new ApiError(500, "Error while updating video"));
     }
 
 
@@ -392,10 +388,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(new ApiResponse(200, "Deleted video successfully", video));
-    } catch (error) {
-        return res
-            .status(500)
-            .json(new ApiError(500, "Something went wrong while deleting the video"));
+    } catch {
+        return res.status(500).json(new ApiError(500, "Error while deleting video"));
     }
 });
 
@@ -729,7 +723,7 @@ const getMyVideos = asyncHandler(async (req, res) => {
             commentCounts.forEach(item => {
                 commentCountMap[item._id.toString()] = item.count;
             });
-        } catch (e) {
+        } catch {
             // If comment model not found, skip
         }
 

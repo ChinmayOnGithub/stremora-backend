@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose"
+import { isValidObjectId } from "mongoose"
 import { Playlist } from "../models/playlist.models.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
@@ -31,10 +31,8 @@ const createPlaylist = asyncHandler(async (req, res) => {
       owner: req.user._id,
     })
     return res.status(200).json(new ApiResponse(200, "Created playlist successfully", playlist));
-  } catch (error) {
-    return res
-      .status(404)
-      .json(new ApiError(404, "Something went wrong while creating playlist", error));
+  } catch {
+    return res.status(500).json(new ApiError(500, "Error while creating playlist"));
   }
 });
 
@@ -274,10 +272,8 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, "Updated playlist successfully", updatedPlaylist));
-  } catch (error) {
-    return res
-      .status(500)
-      .json(new ApiError(500, "Something went wrong while updating the playlist", error));
+  } catch {
+    return res.status(500).json(new ApiError(500, "Error while updating playlist"));
   }
 
 

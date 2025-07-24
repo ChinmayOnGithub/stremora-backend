@@ -54,8 +54,8 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         likedBy: user._id
       })
       return res.status(201).json(new ApiResponse(201, "Like added", like))
-    } catch (error) {
-      return res.status(500).json(new ApiError(500, "An error occurred while adding the like", error))
+    } catch {
+      return res.status(500).json(new ApiError(500, "An error occurred while adding the like"))
     }
   }
 })
@@ -86,7 +86,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         likedBy: req.user._id
       })
       return res.status(201).json(new ApiResponse(201, "Like added", like))
-    } catch (error) {
+    } catch {
       return res.status(400).json(new ApiError(400, "Something went wrong while toggling like for the tweet"))
     }
   }
@@ -145,7 +145,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
       count: likedVideos.length,
       videos: likedVideos
     }, "Liked videos fetched successfully"));
-  } catch (error) {
+  } catch {
     return res.status(500).json(new ApiError(500, "Failed to fetch liked videos"));
   }
 });
@@ -156,9 +156,9 @@ const getAllLikes = asyncHandler(async (req, res) => {
     const allLikes = await Like.find({}).populate('likedBy', 'username').populate('video', 'title');
     console.log("All likes in database:", allLikes);
     return res.status(200).json(new ApiResponse(200, "All likes fetched", allLikes));
-  } catch (error) {
-    console.error("Error fetching all likes:", error);
-    return res.status(500).json(new ApiError(500, "Error fetching all likes", error));
+  } catch {
+    console.error("Error fetching all likes:");
+    return res.status(500).json(new ApiError(500, "Error fetching all likes"));
   }
 });
 
@@ -187,7 +187,7 @@ const checkLikeStatus = asyncHandler(async (req, res) => {
       isLiked: !!likeExists,
       likeCount
     }, "Like status checked"));
-  } catch (error) {
+  } catch {
     return res.status(500).json(new ApiError(500, "Failed to check like status"));
   }
 });
@@ -214,7 +214,7 @@ const syncLikeCounts = asyncHandler(async (req, res) => {
       message: `Synced like counts for ${updatedCount} videos`,
       updatedVideos: updatedCount
     }));
-  } catch (error) {
+  } catch {
     return res.status(500).json(new ApiError(500, "Failed to sync like counts"));
   }
 });

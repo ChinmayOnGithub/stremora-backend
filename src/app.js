@@ -1,13 +1,12 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { upload } from "./middlewares/multer.middleware.js";
 
 
 const app = express();
 
 app.use(cors({
-    origin: ["http://localhost:5173", "http://192.168.1.9:5173", "https://stremora.vercel.app", "http://192.168.52.20:5173"],
+    origin: ["http://localhost:5173", "http://192.168.1.9:5173", "https://stremora.vercel.app", "https://stremora.chinmaypatil.com"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],

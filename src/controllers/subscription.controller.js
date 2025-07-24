@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId, ObjectId } from "mongoose"
+import mongoose from "mongoose"
 import { User } from "../models/user.models.js"
 import { Subscription } from "../models/subscription.models.js"
 import { ApiError } from "../utils/ApiError.js"
@@ -17,7 +17,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
       .json(new ApiError(404, "Please sign in to subscribe"))
   }
 
-  if (!channelId || !isValidObjectId(channelId)) {
+  if (!channelId || !mongoose.isValidObjectId(channelId)) {
     return res
       .status(400)
       .json(new ApiError(400, "Channel ID not valid"))
@@ -69,7 +69,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { channelId } = req.params
 
   // dont need user verification
-  if (!channelId || !isValidObjectId(channelId)) {
+  if (!channelId || !mongoose.isValidObjectId(channelId)) {
     return res
       .status(400)
       .json(new ApiError(400, "Channel ID not valid"))

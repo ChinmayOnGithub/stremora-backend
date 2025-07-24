@@ -3,8 +3,7 @@
 // its a classic higher order function
 const asyncHandler = (requestHandler) => {
     return (req, res, next) => {
-        Promise.resolve(requestHandler(req, res, next)).catch
-            ((err) => next(err));
+        Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
         // this Promise can be replaced with the trycatch block as well but this feels more modern
     }
 }

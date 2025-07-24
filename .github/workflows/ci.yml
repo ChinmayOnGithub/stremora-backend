@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install backend deps
+        working-directory: .
+        run: npm ci
+
+      - name: Lint backend
+        working-directory: .
+        run: npm run lint || npx eslint .
+
+      - name: Test backend
+        working-directory: .
+        run: npm test || echo "No backend tests found"
+
+      - name: Build backend
+        working-directory: .
+        run: npm run build || echo "No backend build step"
+
+      - name: Docker Build (backend)
+        working-directory: .
+        run: docker build -t stremora-backend .

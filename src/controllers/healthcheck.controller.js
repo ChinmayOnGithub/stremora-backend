@@ -1,7 +1,5 @@
 // checks if the health of the server is ok i guess
 
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
 import mongoose from "mongoose";
 
 export const getHealthCheck = async (req, res) => {
@@ -17,10 +15,10 @@ export const getHealthCheck = async (req, res) => {
                 database: dbReady
             }
         });
-    } catch (error) {
+    } catch (err) {
         res.status(503).json({
             status: 'unhealthy',
-            error: error.message,
+            error: 'Unknown error',
             timestamp: new Date().toISOString()
         });
     }
@@ -35,10 +33,10 @@ export const getReadinessCheck = async (req, res) => {
             status: 'ready',
             timestamp: new Date().toISOString()
         });
-    } catch (error) {
+    } catch {
         res.status(503).json({
             status: 'not_ready',
-            error: error.message,
+            error: 'Unknown error',
             timestamp: new Date().toISOString()
         });
     }
