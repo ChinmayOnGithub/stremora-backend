@@ -54,9 +54,23 @@ app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/history", historyRouter);
 app.use("/api/v1/admin", adminRouter);
 
-// good practice to have control over the errors. (Optional) This error.middleware.js file changes rarely.
+// Serve static files before error middleware
+app.use('/public', express.static("public", {
+    fallthrough: true, // Continue to next middleware if file not found
+    index: false // Disable serving index.html for directories
+}));
+
+// Catch-all route for undefined routes
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "Route not found",
+        path: req.path
+    });
+});
+
+// Error middleware should be last
 import { errorHandler } from "./middlewares/error.middleware.js";
 app.use(errorHandler);
-
 
 export { app }
