@@ -10,6 +10,9 @@ app.use(cors({
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    exposedHeaders: ["set-cookie"],
+    preflightContinue: true,
+    optionsSuccessStatus: 200
 }));
 
 
