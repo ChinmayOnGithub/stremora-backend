@@ -39,6 +39,7 @@ import playlistRouter from "../src/routes/playlist.routes.js"
 import subscriptionRouter from "../src/routes/subscription.routes.js"
 import dashboardRouter from "../src/routes/dashboard.routes.js"
 import historyRouter from "../src/routes/history.routes.js"
+import adminRouter from "../src/routes/admin.routes.js";
 
 // routes
 app.use('/api/v1/health', healthCheckRouter);
@@ -51,6 +52,7 @@ app.use("/api/v1/playlist", playlistRouter);
 app.use("/api/v1/subscription", subscriptionRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/history", historyRouter);
+app.use("/api/v1/admin", adminRouter);
 
 // good practice to have control over the errors. (Optional) This error.middleware.js file changes rarely.
 import { errorHandler } from "./middlewares/error.middleware.js";

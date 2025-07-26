@@ -58,27 +58,21 @@ const registerUser = asyncHandler(async (req, res) => {
     const avatarLocalPath = req.files?.avatar?.[0]?.path
     const coverImageLocalPath = req.files?.coverImage?.[0]?.path
 
-    if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar file is missing");
-    };
+    // Remove this check to make avatar optional
+    // if (!avatarLocalPath) {
+    //     throw new ApiError(400, "Avatar file is missing");
+    // };
 
-
-    // uploading on cloudinary
-    // const avatar = await uploadOnCloudinary(avatarLocalPath)
-    // const coverImage = "";
-
-    // if (coverImageLocalPath) {
-    //     coverImage = await uploadOnCloudinary(coverImageLocalPath)
-    // }
-
-    let avatar, coverImage;
-    try {
-        avatar = await uploadOnCloudinary(avatarLocalPath);
-        console.log("Uploaded avatar", avatar);
-
-    } catch (error) {
-        console.log("Error uploading avatar!.", error);
-        throw new ApiError(500, "Failed to upload avatar");
+    let avatar = "", coverImage;
+    if (avatarLocalPath) {
+        try {
+            const uploadedAvatar = await uploadOnCloudinary(avatarLocalPath);
+            avatar = uploadedAvatar.url;
+            console.log("Uploaded avatar", uploadedAvatar);
+        } catch (error) {
+            console.log("Error uploading avatar!.", error);
+            throw new ApiError(500, "Failed to upload avatar");
+        }
     }
     // optionally uploading the coverImage
     if (coverImageLocalPath) {
@@ -92,16 +86,16 @@ const registerUser = asyncHandler(async (req, res) => {
         }
     }
 
-
     // Now all data is taken from the user. Lets create user from data from the mongoose database.
     try {
         const user = await User.create({
             fullname,
             email,
             password,
-            avatar: avatar.url,
+            avatar: avatar, // Will be empty string if not uploaded
             coverImage: coverImage?.url || "", // DEFAULT_COVER_IMAGE can be used in place of "" but i handled it in front end
             username: username.toLowerCase(),
+            role: req.body.role || 'user', // Allow role to be set during registration
         });
 
         const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
@@ -169,7 +163,7 @@ const loginUser = asyncHandler(async (req, res) => {
         if (identifier.includes("@")) {
             user = await User.findOne({ email: identifier });
         } else {
-            user = await User.findOne({ username: identifier });
+            user = await User.findOne({ username: identifier.toLowerCase() });
         }
 
         if (!user) {
@@ -195,6 +189,11 @@ const loginUser = asyncHandler(async (req, res) => {
             return res.status(500).json(new ApiError(500, "Something went wrong while fetching user data."));
         }
 
+        // Explicitly check role
+        if (loggedInUser.role !== 'user' && loggedInUser.role !== 'admin') {
+            return res.status(401).json(new ApiError(401, "Invalid user role"));
+        }
+
         const options = {
             httpOnly: true, // makes the cookie non modiefiable from client side ... Prevents client-side access
             secure: process.env.NODE_ENV === "production",
@@ -207,7 +206,14 @@ const loginUser = asyncHandler(async (req, res) => {
             .cookie("refreshToken", refreshToken, options)
             .json(new ApiResponse(
                 200,
-                { user: loggedInUser, accessToken, refreshToken }, // This is backup for mobile because we can not store cookies on mobile devices. Hence also providing accessToken and refreshToken ((Mobile APP)) because backend can have any frontend.
+                {
+                    user: {
+                        ...loggedInUser.toObject(),
+                        isAdmin: loggedInUser.role === 'admin'
+                    },
+                    accessToken,
+                    refreshToken
+                },
                 "User logged in successfully!"
             ));
 
@@ -332,10 +338,19 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+    // Get fresh user data from database
+    const user = await User.findById(req.user._id).select("-password -refreshToken");
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
     return res
         .status(200)
-        .json(new ApiResponse(200, req.user, "Current user details"))
-    // the user is verified after the 
+        .json(new ApiResponse(200, {
+            ...user.toObject(),
+            isAdmin: user.role === 'admin'
+        }, "Current user details"))
 })
 
 

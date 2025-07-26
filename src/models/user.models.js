@@ -43,12 +43,18 @@ const userSchema = new Schema(
         },
         avatar: {
             type: String, //cloudanary URL
-            required: true,
+            // required: true, // Make avatar optional
         },
         coverImage: {
             type: String, //cloudanary URL
             default: DEFAULT_COVER_IMAGE
         },
+        role: {
+            type: String,
+            enum: ['user', 'admin'],
+            default: 'user'
+        },
+
         watchHistory: [
             {
                 type: Schema.Types.ObjectId, // needs a reference
@@ -62,6 +68,7 @@ const userSchema = new Schema(
         refreshToken: {
             type: String,
         },
+
     },
     { timestamps: true } // createdAt and updatedAt is added here
 )
@@ -88,7 +95,8 @@ userSchema.methods.generateAccessToken = function () {
             _id: this._id,
             username: this.username,
             email: this.email,
-            fullname: this.fullname
+            fullname: this.fullname,
+            role: this.role // Include role in JWT
         },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
