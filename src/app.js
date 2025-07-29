@@ -20,7 +20,9 @@ const corsOptions = {
         "http://localhost:5173",
         "http://192.168.1.9:5173",
         "https://stremora.vercel.app",
-        "https://stremora.chinmaypatil.com"
+        "https://stremora.chinmaypatil.com",
+        "https://stremora.vercel.app/admin",
+        "https://stremora.chinmaypatil.com/admin"
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
