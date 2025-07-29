@@ -15,20 +15,29 @@ const app = express();
 //     optionsSuccessStatus: 200
 // }));
 
-const corsOptions = {
-    origin: [
-        "http://localhost:5173",
-        "http://192.168.1.9:5173",
-        "https://stremora.vercel.app",
-        "https://stremora.chinmaypatil.com"
-    ],
+// const corsOptions = {
+//     origin: [
+//         "http://localhost:5173",
+//         "http://192.168.1.9:5173",
+//         "https://stremora.vercel.app",
+//         "https://stremora.chinmaypatil.com"
+//     ],
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//     credentials: true,
+//     exposedHeaders: ["set-cookie"],
+// };
+
+app.use(cors({
+    origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-    exposedHeaders: ["set-cookie"],
-};
+    // drop credentials: true for this test
+}));
 
-app.use(cors(corsOptions));
+
+
+// app.use(cors(corsOptions));
 
 // common middlewares
 // app.use(express.json({ limit: "16kb" }));
