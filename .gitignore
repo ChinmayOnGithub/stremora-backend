@@ -22,6 +22,10 @@ coverage/
 # Environment variables
 .env
 .env.local
+.env.example
+.env.test
+.env.production
+.env.development
 .env.*.local
 
 # IDE and editor settings

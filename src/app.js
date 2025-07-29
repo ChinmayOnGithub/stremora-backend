@@ -5,24 +5,30 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
-app.use(cors({
-    origin: ["http://localhost:5173", "http://192.168.1.9:5173", "https://stremora.vercel.app", "https://stremora.chinmaypatil.com"],
-    credentials: true,
+// app.use(cors({
+//     origin: ["http://localhost:5173", "http://192.168.1.9:5173", "https://stremora.vercel.app", "https://stremora.chinmaypatil.com"],
+//     credentials: true,
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+//     exposedHeaders: ["set-cookie"],
+//     preflightContinue: true,
+//     optionsSuccessStatus: 200
+// }));
+
+const corsOptions = {
+    origin: [
+        "http://localhost:5173",
+        "http://192.168.1.9:5173",
+        "https://stremora.vercel.app",
+        "https://stremora.chinmaypatil.com"
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true,
     exposedHeaders: ["set-cookie"],
-    preflightContinue: true,
-    optionsSuccessStatus: 200
-}));
+};
 
-
-// app.use(
-//     // cors is middleware that decide who can access our server
-//     cors({
-//         origin: process.env.CORS_ORIGIN,
-//         credentials: true
-//     })
-// )
+app.use(cors(corsOptions));
 
 // common middlewares
 // app.use(express.json({ limit: "16kb" }));
