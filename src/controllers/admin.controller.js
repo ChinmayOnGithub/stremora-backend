@@ -25,7 +25,7 @@ export const deleteUserById = async (req, res) => {
 
 // List all videos
 export const getAllVideos = async (req, res) => {
-  const videos = await Video.find();
+  const videos = await Video.find().populate("owner", "username avatar");
   res.json(videos);
 };
 
