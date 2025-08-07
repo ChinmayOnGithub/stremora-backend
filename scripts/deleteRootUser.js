@@ -1,15 +1,8 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { User } from "../src/models/user.models.js";
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 
-// Get the directory path of the current module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load .env from the root directory
-dotenv.config({ path: join(__dirname, '../.env') });
+dotenv.config();
 
 async function deleteRootAdmin() {
   try {
@@ -18,7 +11,7 @@ async function deleteRootAdmin() {
       process.exit(1);
     }
     console.log("Connecting to MongoDB:", process.env.MONGODB_URI);
-    await mongoose.connect(`${process.env.MONGODB_URI}/vidtube`);
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ Connected to MongoDB");
     const admins = await User.find({ role: "admin" });
     console.log("All admin users:", admins);

@@ -51,10 +51,9 @@ const userSchema = new Schema(
         },
         role: {
             type: String,
-            enum: ['user', 'admin'],
-            default: 'user'
+            enum: ["user", "admin"],
+            default: "user"
         },
-
         watchHistory: [
             {
                 type: Schema.Types.ObjectId, // needs a reference

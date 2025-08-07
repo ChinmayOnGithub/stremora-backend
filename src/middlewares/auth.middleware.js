@@ -32,6 +32,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
         // req.user is additional information now
 
         // to transfer the flow control just say next()
+        console.log("Auth Middleware - Received Cookies:", req.cookies);
         next();
     } catch (error) {
         throw new ApiError(401, error?.message || "Invalid access token");

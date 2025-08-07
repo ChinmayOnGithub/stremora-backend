@@ -95,7 +95,6 @@ const registerUser = asyncHandler(async (req, res) => {
             avatar: avatar, // Will be empty string if not uploaded
             coverImage: coverImage?.url || "", // DEFAULT_COVER_IMAGE can be used in place of "" but i handled it in front end
             username: username.toLowerCase(),
-            role: req.body.role || 'user', // Allow role to be set during registration
         });
 
         const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
@@ -114,7 +113,7 @@ const registerUser = asyncHandler(async (req, res) => {
         const options = {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "Strict"
+            sameSite: "None"
         };
 
         return res
@@ -189,15 +188,10 @@ const loginUser = asyncHandler(async (req, res) => {
             return res.status(500).json(new ApiError(500, "Something went wrong while fetching user data."));
         }
 
-        // Explicitly check role
-        if (loggedInUser.role !== 'user' && loggedInUser.role !== 'admin') {
-            return res.status(401).json(new ApiError(401, "Invalid user role"));
-        }
-
         const options = {
             httpOnly: true, // makes the cookie non modiefiable from client side ... Prevents client-side access
             secure: process.env.NODE_ENV === "production",
-            sameSite: "Strict"
+            sameSite: "None"
         }
 
         return res
@@ -206,14 +200,7 @@ const loginUser = asyncHandler(async (req, res) => {
             .cookie("refreshToken", refreshToken, options)
             .json(new ApiResponse(
                 200,
-                {
-                    user: {
-                        ...loggedInUser.toObject(),
-                        isAdmin: loggedInUser.role === 'admin'
-                    },
-                    accessToken,
-                    refreshToken
-                },
+                { user: loggedInUser, accessToken, refreshToken }, // This is backup for mobile because we can not store cookies on mobile devices. Hence also providing accessToken and refreshToken ((Mobile APP)) because backend can have any frontend.
                 "User logged in successfully!"
             ));
 
@@ -279,7 +266,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             signed: true, // Prevent tampering
-            sameSite: "Strict",
+            sameSite: "None",
 
         }
 
@@ -338,19 +325,10 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    // Get fresh user data from database
-    const user = await User.findById(req.user._id).select("-password -refreshToken");
-
-    if (!user) {
-        throw new ApiError(404, "User not found");
-    }
-
     return res
         .status(200)
-        .json(new ApiResponse(200, {
-            ...user.toObject(),
-            isAdmin: user.role === 'admin'
-        }, "Current user details"))
+        .json(new ApiResponse(200, req.user, "Current user details"))
+    // the user is verified after the 
 })
 
 
