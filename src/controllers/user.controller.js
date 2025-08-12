@@ -6,6 +6,26 @@ import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js
 import jwt from 'jsonwebtoken';
 
 
+// const generateAccessAndRefreshToken = async (userId) => {
+//     try {
+//         const user = await User.findById(userId);
+//         if (!user) {
+//             throw new ApiError(404, "User not found");
+//         }
+
+//         const accessToken = user.generateAccessToken();
+//         const refreshToken = user.generateRefreshToken();
+
+//         user.refreshToken = refreshToken;
+//         await user.save({ validateBeforeSave: false });
+
+//         return { accessToken, refreshToken }
+
+//     } catch (error) {
+//         throw new ApiError(500, "Failed to generate access and refresh tokens  ")
+//     }
+// };
+
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
@@ -16,15 +36,27 @@ const generateAccessAndRefreshToken = async (userId) => {
         const accessToken = user.generateAccessToken();
         const refreshToken = user.generateRefreshToken();
 
-        user.refreshToken = refreshToken;
+        // CRITICAL FIX: Convert to string to ensure proper storage and comparison
+        user.refreshToken = refreshToken.toString();
         await user.save({ validateBeforeSave: false });
 
-        return { accessToken, refreshToken }
+        console.log("Tokens generated and saved for user:", userId);
+
+        return { accessToken, refreshToken };
 
     } catch (error) {
-        throw new ApiError(500, "Failed to generate access and refresh tokens  ")
+        console.error("Error generating tokens:", error);
+
+        // If it's already an ApiError, throw it as-is to preserve the status code
+        if (error instanceof ApiError) {
+            throw error;
+        }
+
+        // For unexpected errors, throw a 500
+        throw new ApiError(500, "Failed to generate access and refresh tokens");
     }
-}
+};
+
 
 const registerUser = asyncHandler(async (req, res) => {
     const { fullname, email, username, password } = req.body;
@@ -237,40 +269,121 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 })
 
+// const refreshAccessToken = asyncHandler(async (req, res) => {
+//     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;  // changed accessToken to refreshToken
+
+//     if (!incomingRefreshToken) {
+//         throw new ApiError(401, "Refresh token is required");
+//     }
+
+//     // now to verify the refreshToken from the databases use trycatch
+//     try {
+//         // this decode the token and hence we can access the payload
+//         // also checks for the expiration of the refreshToken
+//         const decodedToken = jwt.verify(
+//             incomingRefreshToken,
+//             process.env.REFRESH_TOKEN_SECRET,
+//         )
+
+//         const user = await User.findById(decodedToken?._id);
+//         if (!user) {
+//             throw new ApiError(401, "Invalid refresh token");
+//         }
+
+//         if (incomingRefreshToken !== user?.refreshToken) {
+//             throw new ApiError(401, "Invalid refresh token");
+//         }
+
+//         const options = {
+//             httpOnly: true,
+//             secure: process.env.NODE_ENV === "production",
+//             signed: true, // Prevent tampering
+//             sameSite: "None",
+
+//         }
+
+//         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id);
+
+//         return res
+//             .status(200)
+//             .cookie("accessToken", accessToken, options)
+//             .cookie("refreshToken", newRefreshToken, options)
+//             .json(
+//                 new ApiResponse(
+//                     200,
+//                     {
+//                         accessToken,
+//                         refreshToken: newRefreshToken
+//                     },
+//                     "Access token refreshed successfully"));
+
+//     } catch (error) {
+//         if (error.name === "TokenExpiredError") {
+//             throw new ApiError(401, "Refresh token expired, please log in again.");
+//         }
+//         if (error.name === "JsonWebTokenError") {
+//             throw new ApiError(401, "Invalid refresh token.");
+//         }
+//         throw new ApiError(500, "Something went wrong while refreshing the access token");
+//     }
+// })
+
+// In stremora-backend/src/controllers/user.controller.js
+
 const refreshAccessToken = asyncHandler(async (req, res) => {
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;  // changed accessToken to refreshToken
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    console.log("=== REFRESH TOKEN DEBUG ===");
+    console.log("Cookies:", req.cookies);
+    console.log("Body:", req.body);
+    console.log("Incoming token exists:", !!incomingRefreshToken);
 
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Refresh token is required");
     }
 
-    // now to verify the refreshToken from the databases use trycatch
     try {
-        // this decode the token and hence we can access the payload
-        // also checks for the expiration of the refreshToken
+        console.log("Verifying token...");
+        // Verify the token first - this will throw if invalid/expired
         const decodedToken = jwt.verify(
             incomingRefreshToken,
             process.env.REFRESH_TOKEN_SECRET,
-        )
+        );
+
+        console.log("Token verified. User ID:", decodedToken?._id);
 
         const user = await User.findById(decodedToken?._id);
         if (!user) {
-            throw new ApiError(401, "Invalid refresh token");
+            console.log("User not found for ID:", decodedToken?._id);
+            throw new ApiError(401, "Invalid refresh token - user not found");
         }
 
-        if (incomingRefreshToken !== user?.refreshToken) {
-            throw new ApiError(401, "Invalid refresh token");
+        console.log("User found. Stored token exists:", !!user.refreshToken);
+        console.log("Tokens match:", incomingRefreshToken === user.refreshToken);
+
+        // CRITICAL FIX: Ensure string comparison
+        const storedToken = user.refreshToken ? user.refreshToken.toString() : null;
+        const incomingToken = incomingRefreshToken.toString();
+
+        if (incomingToken !== storedToken) {
+            console.log("Token mismatch!");
+            console.log("Incoming:", incomingToken.substring(0, 20) + "...");
+            console.log("Stored:", storedToken ? storedToken.substring(0, 20) + "..." : "null");
+            throw new ApiError(401, "Refresh token is expired or has been used");
         }
+
+        console.log("Tokens match! Generating new tokens...");
 
         const options = {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            signed: true, // Prevent tampering
-            sameSite: "None",
-
-        }
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        };
 
         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id);
+
+        console.log("New tokens generated successfully");
 
         return res
             .status(200)
@@ -283,18 +396,35 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                         accessToken,
                         refreshToken: newRefreshToken
                     },
-                    "Access token refreshed successfully"));
+                    "Access token refreshed successfully"
+                )
+            );
 
     } catch (error) {
+        console.error("Refresh token error:", error.name, error.message);
+
+        // Handle specific JWT errors
         if (error.name === "TokenExpiredError") {
-            throw new ApiError(401, "Refresh token expired, please log in again.");
+            console.log("Refresh token expired");
+            throw new ApiError(401, "Refresh token expired, please log in again");
         }
+
         if (error.name === "JsonWebTokenError") {
-            throw new ApiError(401, "Invalid refresh token.");
+            console.log("Invalid JWT structure");
+            throw new ApiError(401, "Invalid refresh token format");
         }
-        throw new ApiError(500, "Something went wrong while refreshing the access token");
+
+        // If it's already an ApiError, throw it as-is
+        if (error instanceof ApiError) {
+            throw error;
+        }
+
+        // Log unexpected errors for debugging
+        console.error("Unexpected refresh token error:", error);
+        throw new ApiError(401, "Invalid refresh token");
     }
-})
+});
+
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body;

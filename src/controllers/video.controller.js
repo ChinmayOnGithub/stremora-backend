@@ -141,114 +141,211 @@ const getAllVideos = asyncHandler(async (req, res) => {
     }
 });
 
+// const publishAVideo = asyncHandler(async (req, res) => {
+//     const { title, description } = req.body
+//     // Validate user input
+//     if (!title?.trim()) {
+//         return res.status(400).json(new ApiError(400, "Title is required"));
+//     }
+//     if (!description?.trim()) {
+//         return res.status(400).json(new ApiError(400, "Description is required"));
+//     }
+//     // first validate the user
+//     const user = await User.findById(req.user?._id);
+//     if (!user) {
+//         return res.status(404).json(new ApiError(404, "User not found!"));
+//     }
+//     // lets handle the video upload part
+//     let videoLocalPath = req.files?.videoFile?.[0]?.path;
+//     let thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+//     const videoFile = req.files?.videoFile?.[0];
+//     if (!videoLocalPath) {
+//         return res.status(404).json(new ApiError(404, "Video file is required"));
+//     }
+//     // Validate mimetype
+//     if (!isVideoMimetype(videoFile?.mimetype)) {
+//         return res.status(400).json(new ApiError(400, "Invalid video format"));
+//     }
+//     // Debug logs for Cloudinary config and file existence
+//     const fs = await import('fs');
+//     console.log("[Cloudinary] Config at video upload:", cloudinary.config());
+//     console.log("[Cloudinary] Video file path:", videoLocalPath, "Exists:", fs.existsSync(videoLocalPath));
+//     let videoCloudinary = null;
+//     // Helper cleanup function
+//     const cleanup = async () => {
+//         if (videoCloudinary?.public_id) {
+//             await deleteFromCloudinary(videoCloudinary.public_id);
+//         }
+//     };
+//     try {
+//         // This is the old, incorrect call that was causing the "unsigned upload" error.
+//         // videoCloudinary = await uploadOnCloudinary(videoLocalPath, videoFile?.mimetype, { timeout: 60000 });
+
+//         // This is the new, correct call. It only passes the file path,
+//         // forcing a secure, signed upload.
+//         videoCloudinary = await uploadOnCloudinary(videoLocalPath);
+
+//         if (!videoCloudinary || !videoCloudinary.duration) {
+//             await cleanup();
+//             throw new ApiError(500, "Video upload failed or missing metadata");
+//         }
+//     } catch (error) {
+//         console.log("Error uploading video!.", error);
+//         await cleanup();
+//         throw new ApiError(500, "Failed to upload video file");
+//     }
+//     // now that the video uploaded to the cloudinary 
+//     // lets create a video with all the components and link and store it in the database
+//     console.log("Video Cloudinary Response:", videoCloudinary);
+//     const duration = videoCloudinary.duration || 0;
+//     const minutes = Math.floor((duration % 3600) / 60);
+//     const seconds = Math.floor(duration % 60);
+//     const videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+//     // Thumbnail is optional
+//     let thumbnail;
+//     if (thumbnailLocalPath) {
+//         try {
+//             console.log("[Cloudinary] Thumbnail file path:", thumbnailLocalPath, "Exists:", fs.existsSync(thumbnailLocalPath));
+
+//             // The old, incorrect call is commented out.
+//             // thumbnail = await uploadOnCloudinary(thumbnailLocalPath, thumbnailFile?.mimetype);
+
+//             // This is the new, correct call for the thumbnail.
+//             thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+//         } catch (error) {
+//             console.log("Error uploading thumbnail!", error);
+//             await cleanup();
+//             throw new ApiError(500, "Failed to upload thumbnail file");
+//         }
+//     } else {
+//         // Auto-Generate a Thumbnail from the Video at 2 Seconds using Cloudinary URL transformation
+//         try {
+//             const thumbnailUrl = cloudinary.url(videoCloudinary.public_id, {
+//                 resource_type: "video",
+//                 transformation: [
+//                     { width: 300, height: 200, crop: "fill" },
+//                     { start_offset: "2" },
+//                     { format: "jpg" }
+//                 ]
+//             });
+//             thumbnail = { url: thumbnailUrl };
+//         } catch (error) {
+//             console.error("Thumbnail generation failed:", error);
+//             thumbnail = { url: "" };
+//         }
+//     }
+
+//     try {
+//         const video = new Video({
+//             videoFile: videoCloudinary.url,
+//             thumbnail: thumbnail?.url || "",
+//             title,
+//             description,
+//             duration: videoDuration || '0',
+//             owner: user._id
+//         });
+//         const publishedVideo = await video.save();
+//         console.log(video);
+//         if (!publishedVideo) {
+//             await cleanup();
+//             throw new ApiError(500, "Something went wrong while publishing the video.");
+//         }
+//         return res
+//             .status(201) // Using 201 Created is more appropriate for a successful creation
+//             .json(new ApiResponse(201, publishedVideo, "Successfully published video"));
+//     } catch (error) {
+//         console.error("Error while saving video to database:", error);
+//         // Ensure cleanup happens if the final database save fails
+//         await cleanup();
+//         throw new ApiError(500, "Error while publishing video");
+//     }
+// });
+
 const publishAVideo = asyncHandler(async (req, res) => {
-    const { title, description } = req.body
-    // Validate user input
-    if (!title?.trim()) {
-        return res.status(400).json(new ApiError(400, "Title is required"));
+    const { title, description } = req.body;
+    if (!title?.trim() || !description?.trim()) {
+        throw new ApiError(400, "Title and description are required");
     }
-    if (!description?.trim()) {
-        return res.status(400).json(new ApiError(400, "Description is required"));
-    }
-    // first validate the user
+
     const user = await User.findById(req.user?._id);
     if (!user) {
-        return res.status(404).json(new ApiError(404, "User not found!"));
+        throw new ApiError(404, "User not found!");
     }
-    // lets handle the video upload part
-    let videoLocalPath = req.files?.videoFile?.[0]?.path;
-    let thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
-    const videoFile = req.files?.videoFile?.[0];
-    if (!videoLocalPath) {
-        return res.status(404).json(new ApiError(404, "Video file is required"));
-    }
-    // Validate mimetype
-    if (!isVideoMimetype(videoFile?.mimetype)) {
-        return res.status(400).json(new ApiError(400, "Invalid video format"));
-    }
-    // Debug logs for Cloudinary config and file existence
-    const fs = await import('fs');
-    console.log("[Cloudinary] Config at video upload:", cloudinary.config());
-    console.log("[Cloudinary] Video file path:", videoLocalPath, "Exists:", fs.existsSync(videoLocalPath));
-    let videoCloudinary = null;
-    // Helper cleanup function
-    const cleanup = async () => {
-        if (videoCloudinary?.public_id) {
-            await deleteFromCloudinary(videoCloudinary.public_id);
-        }
-    };
-    try {
-        // Increase timeout for large videos
-        videoCloudinary = await uploadOnCloudinary(videoLocalPath, videoFile?.mimetype, { timeout: 60000 });
-        if (!videoCloudinary || !videoCloudinary.duration) {
-            await cleanup();
-            throw new ApiError(500, "Video upload failed or missing metadata");
-        }
-    } catch (error) {
-        console.log("Error uploading video!.", error);
-        await cleanup();
-        throw new ApiError(500, "Failed to upload video file");
-    }
-    // now that the video uploaded to the cloudinary 
-    // lets create a video with all the components and link and store it in the database
-    console.log("Video Cloudinary Response:", videoCloudinary);
-    const duration = videoCloudinary.duration || 0;
-    const minutes = Math.floor((duration % 3600) / 60);
-    const seconds = Math.floor(duration % 60);
-    const videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
-    // Thumbnail is optional
-    let thumbnail;
+    const videoFile = req.files?.videoFile?.[0];
+    const thumbnailFile = req.files?.thumbnail?.[0];
+    const videoLocalPath = videoFile?.path;
+    const thumbnailLocalPath = thumbnailFile?.path;
+
+    if (!videoLocalPath) {
+        throw new ApiError(400, "Video file is required");
+    }
+
+    // This is the correct way to call your new upload function.
+    // It passes the mimetype to determine the correct folder for a secure, signed upload.
+    const videoCloudinary = await uploadOnCloudinary(videoLocalPath, videoFile.mimetype);
+    if (!videoCloudinary?.url) {
+        throw new ApiError(500, "Failed to upload video file to Cloudinary");
+    }
+
+    let thumbnailUrl = "";
     if (thumbnailLocalPath) {
-        try {
-            console.log("[Cloudinary] Thumbnail file path:", thumbnailLocalPath, "Exists:", fs.existsSync(thumbnailLocalPath));
-            const thumbnailFile = req.files?.thumbnail?.[0];
-            thumbnail = await uploadOnCloudinary(thumbnailLocalPath, thumbnailFile?.mimetype);
-        } catch (error) {
-            console.log("Error uploading thumbnail!", error);
-            await cleanup();
-            throw new ApiError(500, "Failed to upload thumbnail file");
+        // This is also the corrected call for the thumbnail.
+        const thumbnailCloudinary = await uploadOnCloudinary(thumbnailLocalPath, thumbnailFile.mimetype);
+        if (thumbnailCloudinary?.url) {
+            thumbnailUrl = thumbnailCloudinary.url;
+        } else {
+            console.error("Failed to upload provided thumbnail, will attempt to auto-generate.");
         }
-    } else {
-        // Auto-Generate a Thumbnail from the Video at 2 Seconds using Cloudinary URL transformation
+    }
+
+    // Auto-generate a thumbnail if one wasn't provided or failed to upload
+    if (!thumbnailUrl) {
         try {
-            const thumbnailUrl = cloudinary.url(videoCloudinary.public_id, {
+            thumbnailUrl = cloudinary.url(videoCloudinary.public_id, {
                 resource_type: "video",
                 transformation: [
-                    { width: 300, height: 200, crop: "fill" },
+                    { width: 400, height: 225, crop: "fill" },
                     { start_offset: "2" },
                     { format: "jpg" }
                 ]
             });
-            thumbnail = { url: thumbnailUrl };
         } catch (error) {
-            console.error("Thumbnail generation failed:", error);
-            thumbnail = { url: "" };
+            console.error("Automatic thumbnail generation failed:", error);
+            thumbnailUrl = "";
         }
     }
 
-    try {
-        const video = new Video({
-            videoFile: videoCloudinary.url,
-            thumbnail: thumbnail?.url || "",
-            title,
-            description,
-            duration: videoDuration || '0',
-            owner: user._id
-        });
-        const publishedVideo = await video.save();
-        console.log(video);
-        if (!publishedVideo) {
-            await cleanup();
-            throw new ApiError(500, "Something went wrong while publishing the video.");
-        }
-        return res
-            .status(200)
-            .json(new ApiResponse(200, "Successfully published video", publishedVideo));
-    } catch {
-        return res.status(500).json(new ApiError(500, "Error while publishing video"));
+    const duration = videoCloudinary.duration || 0;
+    const minutes = Math.floor(duration / 60);
+    const seconds = Math.floor(duration % 60);
+    const videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+    const video = await Video.create({
+        videoFile: videoCloudinary.url,
+        thumbnail: thumbnailUrl,
+        title,
+        description,
+        duration: videoDuration,
+        owner: user._id
+    });
+
+    if (!video) {
+        // If saving fails, we should try to clean up the uploaded video from Cloudinary
+        await deleteFromCloudinary(videoCloudinary.public_id);
+        throw new ApiError(500, "Something went wrong while saving the video to the database.");
     }
+
+    return res
+        .status(201)
+        .json(new ApiResponse(201, video, "Video published successfully"));
 });
+
+
+
+
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params; // params are taken from the :videoId from url itself
@@ -297,66 +394,107 @@ const getVideoById = asyncHandler(async (req, res) => {
     }
 });
 
+// const updateVideo = asyncHandler(async (req, res) => {
+//     const { videoId } = req.params
+//     //TODO: update video details like title, description, thumbnail
+//     if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+//         console.log("Invalid videoId");
+//         return res.status(400).json(new ApiError(400, "Valid Video ID is required"));
+//     }
+
+//     const { title, description } = req.body;
+
+//     // optionally update whatever is provided
+//     const updateFields = {};
+//     if (title) updateFields.title = title;
+//     if (description) updateFields.description = description;
+
+
+
+//     // now update the thumbnail (optionally)
+//     const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+
+//     let thumbnail;
+//     if (thumbnailLocalPath) {
+//         try {
+//             // Find the existing video to get the current thumbnail public_id
+//             const existingVideo = await Video.findById(videoId);
+//             if (existingVideo && existingVideo.thumbnail) {
+//                 // Delete the old thumbnail from Cloudinary
+//                 await deleteFromCloudinary(existingVideo.thumbnail);
+//             }
+
+//             // Upload the new thumbnail to Cloudinary
+//             thumbnail = await uploadOnCloudinary(thumbnailLocalPath, req.files?.thumbnail?.[0]?.mimetype);
+//         } catch {
+//             return res.status(500).json(new ApiError(500, "Error while uploading the thumbnail!"));
+//         }
+//     }
+
+//     if (thumbnail) updateFields.thumbnail = thumbnail.url;
+
+//     // update all the fields
+//     try {
+//         const video = await Video.findByIdAndUpdate(
+//             videoId,
+//             {
+//                 $set: updateFields
+//             },
+//             {
+//                 new: true
+//             }
+//         );
+
+//         return res
+//             .status(200)
+//             .json(new ApiResponse(200, "Updated video details successfully", video))
+//     } catch {
+//         return res.status(500).json(new ApiError(500, "Error while updating video"));
+//     }
+
+
+// });
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: update video details like title, description, thumbnail
     if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
-        console.log("Invalid videoId");
         return res.status(400).json(new ApiError(400, "Valid Video ID is required"));
     }
 
     const { title, description } = req.body;
-
-    // optionally update whatever is provided
     const updateFields = {};
     if (title) updateFields.title = title;
     if (description) updateFields.description = description;
 
+    const thumbnailFile = req.files?.thumbnail?.[0];
+    const thumbnailLocalPath = thumbnailFile?.path;
 
-
-    // now update the thumbnail (optionally)
-    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
-
-    let thumbnail;
     if (thumbnailLocalPath) {
         try {
-            // Find the existing video to get the current thumbnail public_id
             const existingVideo = await Video.findById(videoId);
             if (existingVideo && existingVideo.thumbnail) {
-                // Delete the old thumbnail from Cloudinary
                 await deleteFromCloudinary(existingVideo.thumbnail);
             }
-
-            // Upload the new thumbnail to Cloudinary
-            thumbnail = await uploadOnCloudinary(thumbnailLocalPath, req.files?.thumbnail?.[0]?.mimetype);
-        } catch {
-            return res.status(500).json(new ApiError(500, "Error while uploading the thumbnail!"));
+            // This is the correct way to call your new upload function
+            const thumbnail = await uploadOnCloudinary(thumbnailLocalPath, thumbnailFile.mimetype);
+            if (thumbnail?.url) {
+                updateFields.thumbnail = thumbnail.url;
+            }
+        } catch (err) {
+            throw new ApiError(500, "Error while updating the thumbnail!");
         }
     }
 
-    if (thumbnail) updateFields.thumbnail = thumbnail.url;
+    const video = await Video.findByIdAndUpdate(
+        videoId,
+        { $set: updateFields },
+        { new: true }
+    );
 
-    // update all the fields
-    try {
-        const video = await Video.findByIdAndUpdate(
-            videoId,
-            {
-                $set: updateFields
-            },
-            {
-                new: true
-            }
-        );
+    return res
+        .status(200)
+        .json(new ApiResponse(200, video, "Updated video details successfully"))
+});
 
-        return res
-            .status(200)
-            .json(new ApiResponse(200, "Updated video details successfully", video))
-    } catch {
-        return res.status(500).json(new ApiError(500, "Error while updating video"));
-    }
-
-
-})
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
@@ -424,33 +562,112 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 });
 
 
+// const viewVideo = asyncHandler(async (req, res) => {
+//     const { videoId } = req.params;
+//     const { position = 0, duration = 0 } = req.body;
+//     if (!req.user || !req.user._id) {
+//         // Only log critical auth errors
+//         console.warn("VIEW VIDEO: Unauthenticated request attempt");
+//         throw new ApiError(401, "Unauthorized access");
+//     }
+//     if (!mongoose.Types.ObjectId.isValid(videoId)) {
+//         // Only log critical ID errors
+//         console.error(`VIEW VIDEO: Invalid video ID format: ${videoId}`);
+//         throw new ApiError(400, "Invalid video ID format");
+//     }
+//     try {
+//         const video = await Video.findById(videoId);
+//         if (!video) {
+//             // Only log if video not found
+//             console.warn(`VIEW VIDEO: Video not found: ${videoId}`);
+//             throw new ApiError(404, "Video not found");
+//         }
+//         video.views += 1;
+//         await video.save();
+//         // Log only successful view count increment
+//         // console.info(`VIEW VIDEO: Incremented views for video ${videoId}`);
+//         try {
+//             const completed = duration > 0 && (position / duration) > 0.8;
+//             await History.findOneAndUpdate(
+//                 { video: videoId, user: req.user._id },
+//                 {
+//                     $set: {
+//                         watched: true,
+//                         lastWatched: new Date(),
+//                         lastPosition: position,
+//                         watchDuration: duration,
+//                         completed,
+//                         watchedAt: new Date(),
+//                         updatedAt: new Date()
+//                     },
+//                     $inc: { viewCount: 1 }
+//                 },
+//                 { upsert: true, new: true }
+//             );
+//             // Only log on critical error
+//         } catch (historyError) {
+//             console.error("HISTORY UPDATE ERROR:", historyError);
+//         }
+//         return res.status(200).json(new ApiResponse(200, "View counted successfully"));
+//     } catch (error) {
+//         // Only log critical errors
+//         console.error("VIEW VIDEO ERROR:", {
+//             videoId,
+//             user: req.user?._id,
+//             error: error.message,
+//             stack: error.stack
+//         });
+//         const statusCode = error.statusCode || 500;
+//         const message = error.message || "Internal server error";
+//         throw new ApiError(statusCode, message);
+//     }
+// });
+
 const viewVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { position = 0, duration = 0 } = req.body;
+
+    console.log("VIEW VIDEO: Request received");
+    console.log("VIDEO ID =", videoId);
+    console.log("BODY =", req.body);
+    console.log("USER =", req.user);
+
     if (!req.user || !req.user._id) {
-        // Only log critical auth errors
         console.warn("VIEW VIDEO: Unauthenticated request attempt");
         throw new ApiError(401, "Unauthorized access");
     }
+
     if (!mongoose.Types.ObjectId.isValid(videoId)) {
-        // Only log critical ID errors
         console.error(`VIEW VIDEO: Invalid video ID format: ${videoId}`);
         throw new ApiError(400, "Invalid video ID format");
     }
+
     try {
+        console.log("VIEW VIDEO: Fetching video from DB...");
         const video = await Video.findById(videoId);
         if (!video) {
-            // Only log if video not found
             console.warn(`VIEW VIDEO: Video not found: ${videoId}`);
             throw new ApiError(404, "Video not found");
         }
+
+        console.log(`VIEW VIDEO: Found video (${video.title}), incrementing views...`);
         video.views += 1;
         await video.save();
-        // Log only successful view count increment
-        // console.info(`VIEW VIDEO: Incremented views for video ${videoId}`);
+        console.log("VIEW VIDEO: Video views saved.");
+
         try {
             const completed = duration > 0 && (position / duration) > 0.8;
-            await History.findOneAndUpdate(
+            console.log("VIEW VIDEO: Updating history entry...");
+            console.log("HISTORY UPSERT DATA =", {
+                user: req.user._id,
+                video: videoId,
+                watched: true,
+                completed,
+                watchDuration: duration,
+                lastPosition: position,
+            });
+
+            const updatedHistory = await History.findOneAndUpdate(
                 { video: videoId, user: req.user._id },
                 {
                     $set: {
@@ -466,13 +683,15 @@ const viewVideo = asyncHandler(async (req, res) => {
                 },
                 { upsert: true, new: true }
             );
-            // Only log on critical error
+
+            console.log("VIEW VIDEO: History entry upsert result =", updatedHistory);
+
         } catch (historyError) {
             console.error("HISTORY UPDATE ERROR:", historyError);
         }
+
         return res.status(200).json(new ApiResponse(200, "View counted successfully"));
     } catch (error) {
-        // Only log critical errors
         console.error("VIEW VIDEO ERROR:", {
             videoId,
             user: req.user?._id,
@@ -484,6 +703,7 @@ const viewVideo = asyncHandler(async (req, res) => {
         throw new ApiError(statusCode, message);
     }
 });
+
 
 // Trending videos (most viewed)
 export const getTrendingVideos = asyncHandler(async (req, res) => {
