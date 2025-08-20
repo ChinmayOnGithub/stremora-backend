@@ -4,7 +4,7 @@ import {
   verifyEmail,
   verifyEmailByLink,
   resendVerificationCode
-} from "../controllers/emailVerification.controller.js";
+} from "../controllers/emailverification.controller.js";
 
 const router = Router();
 
