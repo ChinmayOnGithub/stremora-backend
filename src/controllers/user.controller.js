@@ -262,6 +262,11 @@ const loginUser = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Invalid credentials.");
         }
 
+        // Block login if the user's email is not verified.
+        if (!user.isEmailVerified) {
+            throw new ApiError(403, "Email not verified. Please check your inbox for a verification code.");
+        }
+
         const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
 
         // now that the user is logged in and the access and refresh tokens are generated

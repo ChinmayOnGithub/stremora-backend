@@ -191,8 +191,40 @@ const verifyEmailByLink = asyncHandler(async (req, res) => {
 });
 
 const resendVerificationCode = asyncHandler(async (req, res) => {
-  // ... (same as before)
+  const { email } = req.body;
+
+  if (!email?.trim()) {
+    throw new ApiError(400, "Email is required");
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase() });
+
+  if (!user) {
+    // Send a generic message to prevent exposing which emails are registered
+    return res.status(200).json(new ApiResponse(200, null, "If an account with this email exists, a new verification code has been sent."));
+  }
+
+  if (user.isEmailVerified) {
+    return res.status(200).json(new ApiResponse(200, null, "This email is already verified."));
+  }
+
+  // Generate a new verification code and expiry date
+  const verificationCode = user.generateEmailVerificationToken();
+  // Your `generateVerificationToken` method should also handle the link token if you use it
+  // For simplicity, this example focuses on the code.
+
+  await user.save({ validateBeforeSave: false });
+
+  // Send the new code via email
+  await emailService.sendVerificationEmail(
+    user.email,
+    verificationCode,
+    user.fullname
+  );
+
+  return res.status(200).json(new ApiResponse(200, null, "A new verification code has been sent to your email."));
 });
+
 
 export {
   sendVerificationEmail,

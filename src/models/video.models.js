@@ -17,13 +17,24 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const videoSchema = new Schema({
     videoFile: {
-        type: String, // cloudinary URL
-        required: true,
-
+        url: {
+            type: String,
+            required: true
+        }, // The full URL
+        public_id: {
+            type: String,
+            required: true
+        }, // The public_id from Cloudinary
     },
     thumbnail: {
-        type: String, // cloudinary URL
-        required: true,
+        url: {
+            type: String,
+            required: true
+        },
+        public_id: {
+            type: String,
+            required: true
+        },
     },
     title: {
         type: String,

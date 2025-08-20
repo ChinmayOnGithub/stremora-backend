@@ -8,6 +8,7 @@ import History from "../models/history.models.js";
 import { Like } from "../models/like.models.js";
 import { Subscription } from "../models/subscription.models.js";
 import { Tweet } from "../models/tweet.models.js";
+import { deleteFromCloudinary } from "../utils/cloudinary.js"; // 1. IMPORT THE DELETE HELPER
 
 // List all users (excluding password and refreshToken)
 export const getAllUsers = async (req, res) => {
@@ -30,11 +31,37 @@ export const getAllVideos = async (req, res) => {
 };
 
 // Delete a video by ID
+// --- THIS IS THE FULLY CORRECTED FUNCTION ---
 export const deleteVideoById = async (req, res) => {
   const { id } = req.params;
-  const deleted = await Video.findByIdAndDelete(id);
-  if (!deleted) throw new ApiError(404, "Video not found");
-  res.json({ message: "Video deleted" });
+
+  // Step 1: Find the video document to get the asset public_ids
+  const video = await Video.findById(id);
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  // Step 2: Delete assets from Cloudinary using their stored public_ids and correct resource types
+  const assetDeletionPromises = [];
+
+  // Delete the video file
+  if (video.videoFile?.public_id) {
+    assetDeletionPromises.push(deleteFromCloudinary(video.videoFile.public_id, "video"));
+  }
+
+  // Delete the thumbnail image
+  if (video.thumbnail?.public_id) {
+    assetDeletionPromises.push(deleteFromCloudinary(video.thumbnail.public_id, "image"));
+  }
+
+  await Promise.all(assetDeletionPromises);
+
+  // Step 3: Delete the video from MongoDB and its associated data
+  await Video.findByIdAndDelete(id);
+  await Comment.deleteMany({ video: id });
+  await Like.deleteMany({ video: id });
+
+  res.json({ message: "Video and all associated assets deleted successfully" });
 };
 
 // --- Playlists ---

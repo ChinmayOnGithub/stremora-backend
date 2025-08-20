@@ -277,23 +277,50 @@ const uploadOnCloudinary = async (localFilePath, mimetype = "") => {
 }
 
 // Your delete function is preserved.
-const deleteFromCloudinary = async (identifier) => {
+// const deleteFromCloudinary = async (identifier) => {
+//     try {
+//         let publicId = identifier;
+//         if (identifier.startsWith("http")) {
+//             const parts = identifier.split("/");
+//             const publicIdWithExtension = parts.slice(parts.indexOf('upload') + 2).join('/');
+//             publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
+//         }
+
+//         console.log("Attempting to delete from Cloudinary. Public ID:", publicId);
+//         const result = await cloudinary.uploader.destroy(publicId, { resource_type: "auto" });
+//         console.log("Deletion result from Cloudinary:", result);
+//         return result;
+//     } catch (error) {
+//         console.log("Error deleting from Cloudinary", error);
+//         return null;
+//     }
+// }
+
+const deleteFromCloudinary = async (publicId, resourceType = "image") => {
     try {
-        let publicId = identifier;
-        if (identifier.startsWith("http")) {
-            const parts = identifier.split("/");
-            const publicIdWithExtension = parts.slice(parts.indexOf('upload') + 2).join('/');
-            publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
+        if (!publicId) {
+            console.log("No public_id provided for deletion.");
+            return null;
         }
 
-        console.log("Attempting to delete from Cloudinary. Public ID:", publicId);
-        const result = await cloudinary.uploader.destroy(publicId, { resource_type: "auto" });
+        console.log(`Attempting to delete from Cloudinary. Public ID: ${publicId}, Type: ${resourceType}`);
+
+        // Use the correct resource_type for deletion
+        const result = await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType,
+        });
+
         console.log("Deletion result from Cloudinary:", result);
+        // A successful result looks like: { result: 'ok' }
+        if (result.result !== 'ok') {
+            console.warn(`Cloudinary deletion failed for ${publicId}:`, result);
+        }
+
         return result;
     } catch (error) {
-        console.log("Error deleting from Cloudinary", error);
+        console.error("Error deleting from Cloudinary", error);
         return null;
     }
-}
+};
 
 export { uploadOnCloudinary, deleteFromCloudinary };
