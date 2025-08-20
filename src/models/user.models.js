@@ -67,6 +67,23 @@ const userSchema = new Schema(
         refreshToken: {
             type: String,
         },
+        isEmailVerified: {
+            type: Boolean,
+            default: false
+        },
+        emailVerificationToken: {
+            type: String,
+            default: null
+        },
+        emailVerificationLinkToken: {
+            type: String,
+            default: null
+        },
+        emailVerificationExpires: {
+            type: Date,
+            default: null
+        },
+
 
     },
     { timestamps: true } // createdAt and updatedAt is added here
@@ -110,6 +127,13 @@ userSchema.methods.generateRefreshToken = function () {
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
     );
+}
+
+userSchema.methods.generateEmailVerificationToken = function () {
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+    this.emailVerificationToken = verificationCode;
+    this.emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    return verificationCode;
 }
 
 export const User = mongoose.model("User", userSchema);

@@ -248,21 +248,22 @@ const uploadOnCloudinary = async (localFilePath, mimetype = "") => {
         }
 
         // Detect file type to determine the correct folder
-        let folder = "stremora/others"; // A default folder
-        if (mimetype.startsWith("image/")) {
-            folder = "stremora/images";
-        } else if (mimetype.startsWith("video/")) {
-            folder = "stremora/videos";
-        }
+        // let folder = "stremora/others"; // A default folder
+        // if (mimetype.startsWith("image/")) {
+        //     folder = "stremora/images";
+        // } else if (mimetype.startsWith("video/")) {
+        //     folder = "stremora/videos";
+        // }
 
         // By only providing resource_type and folder, the SDK will perform a secure, signed upload.
         // We are no longer passing the problematic 'access_mode' or other options.
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "auto",
-            folder,
+            // folder,
         });
 
-        console.log(`File uploaded successfully to Cloudinary folder '${folder}':`, response.url);
+        // console.log(`File uploaded successfully to Cloudinary folder '${folder}':`, response.url);
+        console.log(`File uploaded successfully to Cloudinary folder:`, response.url);
         fs.unlinkSync(localFilePath);
         return response;
 

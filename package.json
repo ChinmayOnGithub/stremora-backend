@@ -19,8 +19,8 @@
         "lint": "eslint ."
     },
     "devDependencies": {
-        "@eslint/js": "^9.31.0",
-        "@types/bun": "^1.2.18",
+        "@eslint/js": "^9.33.0",
+        "@types/bun": "^1.2.20",
         "prettier": "^3.6.2"
     },
     "dependencies": {
@@ -28,17 +28,18 @@
         "cloudinary": "^2.7.0",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
-        "dotenv": "^17.2.0",
-        "eslint": "^9.31.0",
+        "dotenv": "^17.2.1",
+        "eslint": "^9.33.0",
         "express": "^5.1.0",
         "express-session": "^1.18.2",
         "jsonwebtoken": "^9.0.2",
-        "mongoose": "^8.16.3",
+        "mongoose": "^8.17.2",
         "mongoose-aggregate-paginate-v2": "^1.1.4",
-        "multer": "^2.0.1",
+        "multer": "^2.0.2",
+        "nodemailer": "^7.0.5",
         "passport": "^0.7.0",
         "passport-google-oauth20": "^2.0.0",
-        "sonner": "^2.0.6"
+        "sonner": "^2.0.7"
     },
     "private": true,
     "peerDependencies": {

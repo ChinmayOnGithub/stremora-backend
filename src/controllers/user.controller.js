@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import jwt from 'jsonwebtoken';
+import { emailService } from "../utils/emailService.js";
 
 
 // const generateAccessAndRefreshToken = async (userId) => {
@@ -119,6 +120,51 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     // Now all data is taken from the user. Lets create user from data from the mongoose database.
+    // try {
+    //     const user = await User.create({
+    //         fullname,
+    //         email,
+    //         password,
+    //         avatar: avatar, // Will be empty string if not uploaded
+    //         coverImage: coverImage?.url || "", // DEFAULT_COVER_IMAGE can be used in place of "" but i handled it in front end
+    //         username: username.toLowerCase(),
+    //     });
+
+    //     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+    //      // not good practice to do this.
+
+    //     // finally to ensure that the user is created in database, again querying, for the realibility
+    //     const createdUser = await User.findById(user._id).select(
+    //         "-password -refreshToken"
+    //         // -refreshToken
+    //     )
+
+    //     if (!createdUser) {
+    //         throw new ApiError(500, "Something went wrong while registering the user.");
+    //     }
+
+    //     // Set cookie options
+    //     const options = {
+    //         httpOnly: true,
+    //         secure: process.env.NODE_ENV === "production",
+    //         sameSite: "None"
+    //     };
+
+    //     return res
+    //         .status(201)
+    //         .cookie("accessToken", accessToken, options)
+    //         .cookie("refreshToken", refreshToken, options)
+    //         .json(new ApiResponse(200, {
+    //             user: createdUser,
+    //             accessToken,
+    //             refreshToken
+    //         }, "User registered successfully"));
+
+    // } catch {
+    //     throw new ApiError(500, "Error while registering user");
+    // }
+
+    // Now all data is taken from the user. Lets create user from data from the mongoose database.
     try {
         const user = await User.create({
             fullname,
@@ -127,38 +173,47 @@ const registerUser = asyncHandler(async (req, res) => {
             avatar: avatar, // Will be empty string if not uploaded
             coverImage: coverImage?.url || "", // DEFAULT_COVER_IMAGE can be used in place of "" but i handled it in front end
             username: username.toLowerCase(),
+            // IMPORTANT: Email starts as unverified
+            isEmailVerified: false
         });
 
-        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+        // *** REMOVE THE TOKEN GENERATION - USERS CAN'T LOGIN WITHOUT VERIFICATION ***
+        // const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
-        // finally to ensure that the user is created in database, again querying, for the realibility
+        // Generate verification code and send email
+        const verificationCode = user.generateEmailVerificationToken();
+        await user.save({ validateBeforeSave: false });
+
+        // Import emailService at the top of your file
+        // import { emailService } from "../utils/emailService.js";
+        await emailService.sendVerificationEmail(
+            user.email,
+            verificationCode,
+            user.fullname
+        );
+
+        // Get user without sensitive information
         const createdUser = await User.findById(user._id).select(
-            "-password -refreshToken"
-            // -refreshToken
-        )
+            "-password -refreshToken -emailVerificationToken"
+        );
 
         if (!createdUser) {
             throw new ApiError(500, "Something went wrong while registering the user.");
         }
 
-        // Set cookie options
-        const options = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "None"
-        };
+        // *** NO COOKIES ARE SET - USER CANNOT LOGIN YET ***
+        // DO NOT set cookies or return tokens
 
         return res
             .status(201)
-            .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
-            .json(new ApiResponse(200, {
+            .json(new ApiResponse(201, {
                 user: createdUser,
-                accessToken,
-                refreshToken
-            }, "User registered successfully"));
+                requiresVerification: true,
+                message: "Please check your email for verification code"
+            }, "User registered successfully. Email verification required."));
 
-    } catch {
+    } catch (error) {
+        console.error("Registration error:", error);
         throw new ApiError(500, "Error while registering user");
     }
 
