@@ -10,11 +10,11 @@
 [![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)](https://github.com/your-username/stremora-backend)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)](https://github.com/ChinmayOnGithub/stremora-backend)
 
 **A robust, scalable video-sharing platform backend built with modern Node.js technologies**
 
-[🚀 Live Demo](https://stremora-api.render.com) · [📖 API Documentation](https://stremora-docs.vercel.app) · [🐛 Report Bug](https://github.com/your-username/stremora-backend/issues)
+[🚀 Live Demo](https://stremora-api.render.com) · [📖 API Documentation](https://stremora-docs.vercel.app) · [🐛 Report Bug](https://github.com/ChinmayOnGithub/stremora-backend/issues)
 
 </div>
 
@@ -135,7 +135,7 @@ Stremora follows a modular, three-layer architecture designed for maintainabilit
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/stremora-backend.git
+   git clone https://github.com/ChinmayOnGithub/stremora-backend.git
    cd stremora-backend
    ```
 
@@ -336,7 +336,7 @@ Response:
 {
   "success": true,
   "message": "API is running successfully",
-  "timestamp": "2024-01-20T10:30:00.000Z"
+  "timestamp": "2025-01-20T10:30:00.000Z"
 }
 ```
 
@@ -352,6 +352,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Node.js, Express, and MongoDB**
 
-[Repository](https://github.com/your-username/stremora-backend) · [Issues](https://github.com/your-username/stremora-backend/issues)
+[Repository](https://github.com/ChinmayOnGithub/stremora-backend) · [Issues](https://github.com/ChinmayOnGithub/stremora-backend/issues)
 
 </div>
