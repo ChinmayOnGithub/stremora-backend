@@ -12,6 +12,7 @@ pnpm-debug.log*
 pids/
 *.pid
 *.pid.lock
+bun.lock
 
 # Build and coverage directories
 build/
