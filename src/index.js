@@ -1,10 +1,13 @@
+// CRITICAL: Load environment variables FIRST before any other imports
 import dotenv from "dotenv";
-import { app } from "./app.js";
-import connectDB from "./db/index.js";
-
 dotenv.config({
     path: "./.env"
-})
+});
+
+// Now import other modules after env is loaded
+// Cloudinary will auto-configure when its utilities are first used
+import { app } from "./app.js";
+import connectDB from "./db/index.js";
 
 const PORT = process.env.PORT || 8001;
 

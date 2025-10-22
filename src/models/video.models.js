@@ -24,16 +24,22 @@ const videoSchema = new Schema({
         public_id: {
             type: String,
             required: true
-        }, // The public_id from Cloudinary
+        }, // The public_id from Cloudinary or S3
+        storage_provider: {
+            type: String,
+            enum: ["cloudinary", "s3"],
+            default: "cloudinary"
+        }, // Track which storage provider is used
     },
     thumbnail: {
         url: {
             type: String,
-            required: true
+            required: false, // FIXED: Make thumbnail URL optional since auto-generation might fail
+            default: "" // Provide a default empty string
         },
         public_id: {
             type: String,
-            required: true
+            required: false
         },
     },
     title: {
