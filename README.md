@@ -4,11 +4,10 @@ Video storage and management platform backend with hybrid cloud storage (Cloudin
 
 ## Tech Stack
 
-- **Runtime:** Bun
 - **Framework:** Express.js
 - **Database:** MongoDB
 - **Storage:** Cloudinary (primary) + AWS S3 (fallback)
-- **Auth:** JWT + Passport (Google OAuth)
+- **Auth:** JWT
 - **Email:** Nodemailer
 
 ## Quick Start
@@ -62,10 +61,6 @@ SMTP_PORT=587
 SMTP_USER=your_email
 SMTP_PASS=your_app_password
 SMTP_FROM_EMAIL=your_email
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
 
 # Frontend URL
 FRONTEND_URL=http://localhost:5173
@@ -132,7 +127,6 @@ Full API documentation: See routes in `src/routes/`
 ## Features
 
 - JWT authentication with refresh tokens
-- Google OAuth integration
 - Email verification
 - Video upload with metadata extraction (FFmpeg)
 - Automatic thumbnail generation
