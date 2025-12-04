@@ -28,8 +28,6 @@ export const verifyJWT = asyncHandler(async (req, res, next) => { // Added 'res'
         req.user = user;
 
         // req.user is additional information now
-        console.log("User verified successfully");
-        console.log("Auth Middleware - Received Cookies:", req.cookies);
 
         // to transfer the flow control just say next()
         next();

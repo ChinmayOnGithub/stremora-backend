@@ -15,7 +15,8 @@ const dailyRotateFileTransport = new winston.transports.DailyRotateFile({
   filename: "stremora-%DATE%.log",
   datePattern: "YYYY-MM-DD",
   zippedArchive: true,
-  maxFiles: "7d", // keep logs for 7 days
+  maxSize: "20m", // Rotate when file reaches 20MB
+  maxFiles: "14d", // Keep logs for 14 days
 });
 
 // Create logger

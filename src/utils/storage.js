@@ -10,8 +10,8 @@ export function isVideoMimetype(mimetype) {
 
 /**
  * Upload file with fallback strategy
- * 1. Try Cloudinary first (free tier)
- * 2. If Cloudinary fails, use S3 as fallback
+ * 1. Try S3 first (primary, reliable, cost-effective)
+ * 2. If S3 fails, use Cloudinary as fallback
  * 
  * @param {string} localFilePath - Path to local file
  * @param {string} mimetype - File mimetype (optional)
@@ -20,51 +20,51 @@ export function isVideoMimetype(mimetype) {
  */
 const uploadWithFallback = async (localFilePath, mimetype = "", fileType = "auto") => {
     try {
-        console.log(`[STORAGE] Attempting Cloudinary upload (type: ${fileType})`);
+        console.log(`[STORAGE] Attempting S3 upload (type: ${fileType})`);
 
-        // Try Cloudinary first
-        const cloudinaryResult = await uploadOnCloudinary(localFilePath);
-
-        if (cloudinaryResult && cloudinaryResult.public_id) {
-            console.log("[[Storage] Cloudinary upload successful!");
-            return {
-                ...cloudinaryResult,
-                storage_provider: "cloudinary" // Mark which provider was used
-            };
-        }
-
-        // If Cloudinary returns null, try S3
-        console.log(`[STORAGE] Cloudinary failed, attempting S3 fallback (type: ${fileType})`);
+        // Try S3 first (primary storage)
         const s3Result = await uploadOnS3(localFilePath, mimetype, fileType);
 
         if (s3Result && s3Result.public_id) {
-            console.log("[[Storage] S3 fallback successful!");
+            console.log("[[Storage] S3 upload successful!");
             return {
                 ...s3Result,
-                storage_provider: "s3" // Mark which provider was used
+                storage_provider: "s3"
             };
         }
 
-        console.error("[[Storage] Both Cloudinary and S3 failed");
+        // If S3 fails, try Cloudinary as fallback
+        console.log(`[STORAGE] S3 failed, attempting Cloudinary fallback (type: ${fileType})`);
+        const cloudinaryResult = await uploadOnCloudinary(localFilePath);
+
+        if (cloudinaryResult && cloudinaryResult.public_id) {
+            console.log("[[Storage] Cloudinary fallback successful!");
+            return {
+                ...cloudinaryResult,
+                storage_provider: "cloudinary"
+            };
+        }
+
+        console.error("[[Storage] Both S3 and Cloudinary failed");
         return null;
 
     } catch (error) {
         console.error("[[Storage] Upload error:", error.message);
 
-        // Last resort: try S3 if Cloudinary threw an error
+        // Last resort: try Cloudinary if S3 threw an error
         try {
-            console.log(`[STORAGE] Cloudinary error, attempting S3 fallback (type: ${fileType})`);
-            const s3Result = await uploadOnS3(localFilePath, mimetype, fileType);
+            console.log(`[STORAGE] S3 error, attempting Cloudinary fallback (type: ${fileType})`);
+            const cloudinaryResult = await uploadOnCloudinary(localFilePath);
 
-            if (s3Result && s3Result.public_id) {
-                console.log("[[Storage] S3 fallback successful!");
+            if (cloudinaryResult && cloudinaryResult.public_id) {
+                console.log("[[Storage] Cloudinary fallback successful!");
                 return {
-                    ...s3Result,
-                    storage_provider: "s3"
+                    ...cloudinaryResult,
+                    storage_provider: "cloudinary"
                 };
             }
-        } catch (s3Error) {
-            console.error("[[Storage] S3 fallback also failed:", s3Error.message);
+        } catch (cloudinaryError) {
+            console.error("[[Storage] Cloudinary fallback also failed:", cloudinaryError.message);
         }
 
         return null;

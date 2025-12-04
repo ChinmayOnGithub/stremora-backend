@@ -14,11 +14,7 @@ const PORT = process.env.PORT || 8001;
 connectDB()
     .then(() => {
         const server = app.listen(PORT, () => {
-            const actualPort = server.address().port;
-            if (actualPort !== parseInt(PORT)) {
-                console.log(`[SERVER] Port ${PORT} was busy, using port ${actualPort} instead`);
-            }
-            console.log(`[SERVER] Running on http://localhost:${actualPort}`);
+            console.log(`[SERVER] Running on http://localhost:${PORT}`);
             console.log(`[SERVER] Environment: ${process.env.NODE_ENV || 'development'}`);
         });
 

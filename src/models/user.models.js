@@ -83,20 +83,25 @@ const userSchema = new Schema(
             type: Date,
             default: null
         },
-
-
+        passwordResetToken: {
+            type: String,
+            default: null
+        },
+        passwordResetExpires: {
+            type: Date,
+            default: null
+        }
     },
     { timestamps: true } // createdAt and updatedAt is added here
 )
 
 // HOOKS
-// lets use the pre hook from the mongoose middlewares.
-userSchema.pre("save", async function (next) { // next is compulsary here.
-
-    if (!this.isModified("password")) return next();
+// Pre-save hook to hash password before saving
+userSchema.pre("save", async function () {
+    // In newer Mongoose versions, next() is not needed for async functions
+    if (!this.isModified("password")) return;
 
     this.password = await bcrypt.hash(this.password, 10);
-    next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {

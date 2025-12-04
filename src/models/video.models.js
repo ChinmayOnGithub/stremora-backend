@@ -53,7 +53,23 @@ const videoSchema = new Schema({
     },
     description: {
         type: String,
-        required: true,
+        required: false,
+        default: ""
+    },
+    tags: {
+        type: [String],
+        default: [],
+        validate: {
+            validator: function(tags) {
+                return tags.length <= 10; // Max 10 tags
+            },
+            message: 'Maximum 10 tags allowed'
+        }
+    },
+    category: {
+        type: String,
+        enum: ['Education', 'Entertainment', 'Gaming', 'Music', 'News', 'Sports', 'Technology', 'Other'],
+        default: 'Other'
     },
     duration: {
         type: String,
@@ -77,7 +93,22 @@ const videoSchema = new Schema({
 
 videoSchema.plugin(mongooseAggregatePaginate)
 
+// Indexes for performance
 videoSchema.index({ views: -1, createdAt: -1 });
+videoSchema.index({ owner: 1, createdAt: -1 });
+videoSchema.index({ isPublished: 1, createdAt: -1 });
+
+// TEXT INDEX for fast full-text search
+videoSchema.index({ 
+    title: 'text', 
+    description: 'text' 
+}, {
+    weights: {
+        title: 10,        // Title is 10x more important than description
+        description: 5
+    },
+    name: 'video_text_search'
+});
 videoSchema.index({ recommendationScore: -1 });
 
 export const Video = mongoose.model("Video", videoSchema);

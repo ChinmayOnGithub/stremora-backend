@@ -67,7 +67,6 @@ const getHistory = asyncHandler(async (req, res) => {
     if (filter === "incomplete") query.completed = false;
 
     // Debug log to see what query is used!
-    console.log("HISTORY: query=", query);
 
     // Fetch history with video & owner populated
     const history = await History.find(query)
@@ -76,8 +75,8 @@ const getHistory = asyncHandler(async (req, res) => {
       .limit(parseInt(limit))
       .populate({
         path: 'video',
-        select: 'title thumbnail duration views owner',
-        populate: { path: 'owner', select: 'username avatar' }
+        select: 'title thumbnail duration views owner videoFile createdAt',
+        populate: { path: 'owner', select: 'username avatar isVerified' }
       })
       .lean();
 

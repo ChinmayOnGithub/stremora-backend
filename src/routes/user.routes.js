@@ -10,6 +10,8 @@ import {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
+    forgotPassword,
+    resetPassword
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from '../middlewares/auth.middleware.js';
@@ -32,6 +34,8 @@ router.route("/register").post(upload.fields([
 
 router.route("/login").post(loginUser)
 router.route("/refresh-token").post(refreshAccessToken)
+router.route("/forgot-password").post(forgotPassword)
+router.route("/reset-password/:token").post(resetPassword)
 // user should be able to access other channel without login
 router.route("/c/:username").get(getUserChannelProfile)
 

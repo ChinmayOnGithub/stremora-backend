@@ -14,6 +14,7 @@ import {
     getChannelLatestVideos,
     getChannelOldestVideos,
     getMyVideos,
+    searchVideos
 } from "../controllers/video.controller.js"
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -59,6 +60,7 @@ router.route("/get-video-by-id/:videoId").get(getVideoById);
 router.route("/view/:videoId").put(verifyJWT, incrementView);
 router.route("/trending").get(getTrendingVideos);
 router.route("/recommended").get(getRecommendedVideos);
+router.route("/search").get(searchVideos); // Fast search endpoint
 
 // Channel-specific video filters
 router.route("/channel/:channelId/popular").get(getChannelPopularVideos);

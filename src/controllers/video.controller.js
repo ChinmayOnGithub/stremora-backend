@@ -141,14 +141,26 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 
 const publishAVideo = asyncHandler(async (req, res) => {
-    const { title, description } = req.body;
+    const { title, description, tags, category } = req.body;
 
     // Validate user input
     if (!title?.trim()) {
         throw new ApiError(400, "Title is required");
     }
-    if (!description?.trim()) {
-        throw new ApiError(400, "Description is required");
+    
+    // Parse tags if sent as JSON string
+    let parsedTags = [];
+    if (tags) {
+        try {
+            parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags;
+            if (!Array.isArray(parsedTags)) {
+                parsedTags = [];
+            }
+            // Limit to 10 tags
+            parsedTags = parsedTags.slice(0, 10);
+        } catch (e) {
+            console.warn("[VIDEO] Failed to parse tags:", e);
+        }
     }
 
     // Verify user exists
@@ -245,20 +257,17 @@ const publishAVideo = asyncHandler(async (req, res) => {
             console.log("[VIDEO] Auto-generating thumbnail from video");
             
             if (videoCloudinary.storage_provider === "cloudinary") {
-                // Use Cloudinary transformation for auto-thumbnail
-                const thumbnailUrl = cloudinary.url(videoCloudinary.public_id, {
-                    resource_type: "video",
-                    transformation: [
-                        { width: 300, height: 200, crop: "fill" },
-                        { start_offset: "2" },
-                        { format: "jpg" }
-                    ]
-                });
+                // Build clean Cloudinary thumbnail URL manually (without query params)
+                const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+                const publicId = videoCloudinary.public_id;
+                const thumbnailUrl = `https://res.cloudinary.com/${cloudName}/video/upload/c_fill,h_225,w_400/so_2/${publicId}.jpg`;
+                
                 thumbnailData = {
                     url: thumbnailUrl,
-                    public_id: `${videoCloudinary.public_id}.jpg`,
+                    public_id: publicId, // Store clean public_id without .jpg
                     storage_provider: 'cloudinary'
                 };
+                console.log("[VIDEO] Generated Cloudinary thumbnail URL:", thumbnailUrl);
             } else {
                 // For S3, use video URL as fallback
                 thumbnailData = {
@@ -267,7 +276,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
                     storage_provider: 's3'
                 };
             }
-            console.log("[VIDEO] Thumbnail auto-generated successfully");
         }
 
         // 4. Save video to database
@@ -280,9 +288,11 @@ const publishAVideo = asyncHandler(async (req, res) => {
             },
             thumbnail: thumbnailData,
             title,
-            description,
+            description: description?.trim() || "",
             duration: videoDuration,
-            owner: user._id
+            owner: user._id,
+            tags: parsedTags,
+            category: category || 'Other'
         });
 
         const publishedVideo = await video.save();
@@ -614,7 +624,6 @@ const viewVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { position = 0, duration = 0 } = req.body;
 
-    console.log("VIEW VIDEO: Request received");
     console.log("VIDEO ID =", videoId);
     console.log("BODY =", req.body);
     console.log("USER =", req.user);
@@ -630,29 +639,17 @@ const viewVideo = asyncHandler(async (req, res) => {
     }
 
     try {
-        console.log("VIEW VIDEO: Fetching video from DB...");
         const video = await Video.findById(videoId);
         if (!video) {
             console.warn(`VIEW VIDEO: Video not found: ${videoId}`);
             throw new ApiError(404, "Video not found");
         }
 
-        console.log(`VIEW VIDEO: Found video (${video.title}), incrementing views...`);
         video.views += 1;
         await video.save();
-        console.log("VIEW VIDEO: Video views saved.");
 
         try {
             const completed = duration > 0 && (position / duration) > 0.8;
-            console.log("VIEW VIDEO: Updating history entry...");
-            console.log("HISTORY UPSERT DATA =", {
-                user: req.user._id,
-                video: videoId,
-                watched: true,
-                completed,
-                watchDuration: duration,
-                lastPosition: position,
-            });
 
             const updatedHistory = await History.findOneAndUpdate(
                 { video: videoId, user: req.user._id },
@@ -671,7 +668,6 @@ const viewVideo = asyncHandler(async (req, res) => {
                 { upsert: true, new: true }
             );
 
-            console.log("VIEW VIDEO: History entry upsert result =", updatedHistory);
 
         } catch (historyError) {
             console.error("HISTORY UPDATE ERROR:", historyError);
@@ -957,6 +953,92 @@ const getMyVideos = asyncHandler(async (req, res) => {
     }
 });
 
+// Fast search using MongoDB text index
+const searchVideos = asyncHandler(async (req, res) => {
+    const { q, page = 1, limit = 20 } = req.query;
+
+    if (!q || q.trim().length === 0) {
+        return res.status(400).json(
+            new ApiError(400, "Search query is required")
+        );
+    }
+
+    const pageNum = Math.max(parseInt(page), 1);
+    const limitNum = Math.min(parseInt(limit), 50);
+    const skip = (pageNum - 1) * limitNum;
+
+    try {
+        let videos = [];
+        let total = 0;
+
+        // Try text search first (fast, but requires exact words)
+        try {
+            videos = await Video.find(
+                { 
+                    $text: { $search: q },
+                    isPublished: true
+                },
+                { 
+                    score: { $meta: "textScore" }
+                }
+            )
+            .sort({ score: { $meta: "textScore" }, views: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .populate('owner', 'username avatar fullname')
+            .lean();
+
+            total = await Video.countDocuments({
+                $text: { $search: q },
+                isPublished: true
+            });
+        } catch (textSearchError) {
+            console.log("[SEARCH] Text search failed, using regex fallback");
+        }
+
+        // If text search returns no results, use regex for partial matching
+        if (videos.length === 0) {
+            const searchRegex = new RegExp(q.split(' ').join('|'), 'i'); // Match any word
+            
+            videos = await Video.find({
+                $or: [
+                    { title: searchRegex },
+                    { description: searchRegex }
+                ],
+                isPublished: true
+            })
+            .sort({ views: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .populate('owner', 'username avatar fullname')
+            .lean();
+
+            total = await Video.countDocuments({
+                $or: [
+                    { title: searchRegex },
+                    { description: searchRegex }
+                ],
+                isPublished: true
+            });
+        }
+
+        return res.status(200).json(
+            new ApiResponse(200, {
+                videos,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total,
+                    pages: Math.ceil(total / limitNum)
+                }
+            }, "Search results fetched successfully")
+        );
+    } catch (error) {
+        console.error("[SEARCH] Error:", error);
+        throw new ApiError(500, "Error performing search");
+    }
+});
+
 export {
     getAllVideos,
     publishAVideo,
@@ -968,5 +1050,6 @@ export {
     getChannelPopularVideos,
     getChannelLatestVideos,
     getChannelOldestVideos,
-    getMyVideos
+    getMyVideos,
+    searchVideos
 }

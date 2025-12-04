@@ -43,9 +43,10 @@ if (mongoose.models.Like) {
     delete mongoose.models.Like;
 }
 
-likeSchema.pre('save', function (next) {
-    console.log(this.schema.paths);  // Logs the schema paths before saving
-    next();
-});
+// Remove the problematic pre-save hook or fix it
+// likeSchema.pre('save', function (next) {
+//     console.log(this.schema.paths);
+//     next();
+// });
 
 export const Like = mongoose.model("Like", likeSchema);

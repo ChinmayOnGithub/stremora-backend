@@ -173,3 +173,35 @@ class EmailService {
 }
 
 export const emailService = new EmailService();
+
+// Generic sendEmail function for custom emails
+export const sendEmail = async ({ to, subject, html }) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: process.env.SMTP_PORT === '465',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: {
+        name: 'STREMORA',
+        address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER
+      },
+      to,
+      subject,
+      html
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('[EMAIL] Email sent successfully:', result.messageId);
+    return result;
+  } catch (error) {
+    console.error('[EMAIL] Error sending email:', error);
+    throw new ApiError(500, 'Failed to send email');
+  }
+};

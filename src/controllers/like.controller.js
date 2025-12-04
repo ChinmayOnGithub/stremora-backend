@@ -11,84 +11,121 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const userId = req.user?._id;
 
+  // Validate video ID
   if (!isValidObjectId(videoId)) {
-    return res.status(400).json(new ApiError(400, "Invalid video ID"));
+    throw new ApiError(400, "Invalid video ID");
   }
 
+  // Check if user is authenticated
+  if (!userId) {
+    throw new ApiError(401, "Please log in to like videos");
+  }
+
+  // Check if user's email is verified
+  const user = await User.findById(userId).select('isEmailVerified');
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (!user.isEmailVerified) {
+    throw new ApiError(403, "Please verify your email to like videos. Check your inbox for the verification code.");
+  }
+
+  // Check if video exists
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  // Toggle like
   const existingLike = await Like.findOne({ video: videoId, likedBy: userId });
 
   if (existingLike) {
     await Like.deleteOne({ _id: existingLike._id });
     await Video.findByIdAndUpdate(videoId, { $inc: { likesCount: -1 } });
-    return res.status(200).json(new ApiResponse(200, "Like removed"));
+    return res.status(200).json(new ApiResponse(200, null, "Like removed"));
   } else {
     const like = await Like.create({ video: videoId, likedBy: userId });
     await Video.findByIdAndUpdate(videoId, { $inc: { likesCount: 1 } });
-    return res.status(201).json(new ApiResponse(201, "Like added", like));
+    return res.status(201).json(new ApiResponse(201, like, "Like added"));
   }
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
-  const { commentId } = req.params
-  //TODO: toggle like on comment
+  const { commentId } = req.params;
+  const userId = req.user?._id;
 
+  // Validate comment ID
   if (!commentId || !mongoose.Types.ObjectId.isValid(commentId)) {
-    console.log("Invalid commentId");
-    return res.status(400).json(new ApiError(400, "Valid Comment ID is required"));
+    throw new ApiError(400, "Valid Comment ID is required");
   }
 
-  // recheck user
-  const user = await User.findById(req.user?._id)
+  // Check if user is authenticated
+  if (!userId) {
+    throw new ApiError(401, "Please log in to like comments");
+  }
+
+  // Check if user exists and email is verified
+  const user = await User.findById(userId).select('isEmailVerified');
   if (!user) {
-    return res.status(401).json(new ApiError(401, "User not found, Please sign in to like this comment"))
+    throw new ApiError(404, "User not found");
   }
-  // check if video is already liked
-  const existingLike = await Like.findOne({ comment: commentId, likedBy: user._id })
+
+  if (!user.isEmailVerified) {
+    throw new ApiError(403, "Please verify your email to like comments. Check your inbox for the verification code.");
+  }
+
+  // Toggle like
+  const existingLike = await Like.findOne({ comment: commentId, likedBy: userId });
+  
   if (existingLike) {
-    await Like.deleteOne({ _id: existingLike._id })
-    return res.status(200).json(new ApiResponse(200, "Like removed", existingLike))
+    await Like.deleteOne({ _id: existingLike._id });
+    return res.status(200).json(new ApiResponse(200, existingLike, "Like removed"));
   } else {
-    try {
-      const like = await Like.create({
-        comment: commentId,
-        likedBy: user._id
-      })
-      return res.status(201).json(new ApiResponse(201, "Like added", like))
-    } catch {
-      return res.status(500).json(new ApiError(500, "An error occurred while adding the like"))
-    }
+    const like = await Like.create({
+      comment: commentId,
+      likedBy: userId
+    });
+    return res.status(201).json(new ApiResponse(201, like, "Like added"));
   }
-})
+});
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
-  const { tweetId } = req.params
-  //TODO: toggle like on tweet
+  const { tweetId } = req.params;
+  const userId = req.user?._id;
 
+  // Validate tweet ID
   if (!tweetId || !isValidObjectId(tweetId)) {
-    return res
-      .status(400)
-      .json(new ApiError(400, "Tweet Id is not valid"))
+    throw new ApiError(400, "Valid Tweet ID is required");
   }
 
-  const user = await User.findById(req.user?._id);
+  // Check if user is authenticated
+  if (!userId) {
+    throw new ApiError(401, "Please log in to like tweets");
+  }
+
+  // Check if user exists and email is verified
+  const user = await User.findById(userId).select('isEmailVerified');
   if (!user) {
-    return res.status(400).json(new ApiError(400, "User not found"));
+    throw new ApiError(404, "User not found");
   }
 
-  const existingLike = await Like.findOne({ tweet: tweetId, likedBy: req.user._id })
+  if (!user.isEmailVerified) {
+    throw new ApiError(403, "Please verify your email to like tweets. Check your inbox for the verification code.");
+  }
+
+  // Toggle like
+  const existingLike = await Like.findOne({ tweet: tweetId, likedBy: userId });
+  
   if (existingLike) {
-    await Like.deleteOne({ _id: existingLike._id })
-    return res.status(200).json(new ApiResponse(200, "Like removed", existingLike))
+    await Like.deleteOne({ _id: existingLike._id });
+    return res.status(200).json(new ApiResponse(200, existingLike, "Like removed"));
   } else {
-    try {
-      const like = await Like.create({
-        tweet: tweetId,
-        likedBy: req.user._id
-      })
-      return res.status(201).json(new ApiResponse(201, "Like added", like))
-    } catch {
-      return res.status(400).json(new ApiError(400, "Something went wrong while toggling like for the tweet"))
-    }
+    const like = await Like.create({
+      tweet: tweetId,
+      likedBy: userId
+    });
+    return res.status(201).json(new ApiResponse(201, like, "Like added"));
   }
 });
 
@@ -130,12 +167,14 @@ const getLikedVideos = asyncHandler(async (req, res) => {
           duration: "$videoDetails.duration",
           views: "$videoDetails.views",
           thumbnail: "$videoDetails.thumbnail",
+          videoFile: "$videoDetails.videoFile",
           likesCount: "$videoDetails.likesCount",
           createdAt: "$videoDetails.createdAt",
           owner: {
             _id: "$ownerDetails._id",
             username: "$ownerDetails.username",
-            avatar: "$ownerDetails.avatar"
+            avatar: "$ownerDetails.avatar",
+            isVerified: "$ownerDetails.isVerified"
           }
         }
       }
@@ -145,7 +184,8 @@ const getLikedVideos = asyncHandler(async (req, res) => {
       count: likedVideos.length,
       videos: likedVideos
     }, "Liked videos fetched successfully"));
-  } catch {
+  } catch (error) {
+    console.error("Error fetching liked videos:", error);
     return res.status(500).json(new ApiError(500, "Failed to fetch liked videos"));
   }
 });
