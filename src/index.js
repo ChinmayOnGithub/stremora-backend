@@ -13,11 +13,27 @@ const PORT = process.env.PORT || 8001;
 
 connectDB()
     .then(() => {
-        app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
-        })
+        const server = app.listen(PORT, () => {
+            const actualPort = server.address().port;
+            if (actualPort !== parseInt(PORT)) {
+                console.log(`[SERVER] Port ${PORT} was busy, using port ${actualPort} instead`);
+            }
+            console.log(`[SERVER] Running on http://localhost:${actualPort}`);
+            console.log(`[SERVER] Environment: ${process.env.NODE_ENV || 'development'}`);
+        });
+
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                console.error(`[SERVER] Port ${PORT} is already in use`);
+                console.error(`[SERVER] Please stop the other process or change the PORT in .env`);
+                process.exit(1);
+            } else {
+                console.error('[SERVER] Error starting server:', error.message);
+                process.exit(1);
+            }
+        });
     })
     .catch((err) => {
-        console.log("MongoDB connection error", err);
-
+        console.error("[DATABASE] MongoDB connection error:", err.message);
+        process.exit(1);
     })

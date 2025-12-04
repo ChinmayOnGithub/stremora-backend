@@ -49,16 +49,16 @@ app.use(logMiddleware);
 
 // import routes
 import healthCheckRouter from './routes/healthcheck.routes.js';
-import userRouter from "../src/routes/user.routes.js";
-import videoRouter from "../src/routes/video.routes.js";
-import likeRouter from "../src/routes/like.routes.js";
-import tweetRouter from "../src/routes/tweet.routes.js";
-import commentRouter from "../src/routes/comment.routes.js"
-import playlistRouter from "../src/routes/playlist.routes.js"
-import subscriptionRouter from "../src/routes/subscription.routes.js"
-import dashboardRouter from "../src/routes/dashboard.routes.js"
-import historyRouter from "../src/routes/history.routes.js"
-import adminRouter from "../src/routes/admin.routes.js";
+import userRouter from "./routes/user.routes.js";
+import videoRouter from "./routes/video.routes.js";
+import likeRouter from "./routes/like.routes.js";
+import tweetRouter from "./routes/tweet.routes.js";
+import commentRouter from "./routes/comment.routes.js"
+import playlistRouter from "./routes/playlist.routes.js"
+import subscriptionRouter from "./routes/subscription.routes.js"
+import dashboardRouter from "./routes/dashboard.routes.js"
+import historyRouter from "./routes/history.routes.js"
+import adminRouter from "./routes/admin.routes.js";
 import emailVerificationRouter from "./routes/emailverification.routes.js";
 
 // routes

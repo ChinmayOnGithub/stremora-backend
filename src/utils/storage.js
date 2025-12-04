@@ -15,17 +15,18 @@ export function isVideoMimetype(mimetype) {
  * 
  * @param {string} localFilePath - Path to local file
  * @param {string} mimetype - File mimetype (optional)
+ * @param {string} fileType - Folder type: "videos", "thumbnails", "avatars", "covers" (optional)
  * @returns {Promise<Object|null>} Upload response with storage_provider field
  */
-const uploadWithFallback = async (localFilePath, mimetype = "") => {
+const uploadWithFallback = async (localFilePath, mimetype = "", fileType = "auto") => {
     try {
-        console.log("📤 [Storage] Attempting Cloudinary upload first...");
+        console.log(`[STORAGE] Attempting Cloudinary upload (type: ${fileType})`);
 
         // Try Cloudinary first
         const cloudinaryResult = await uploadOnCloudinary(localFilePath);
 
         if (cloudinaryResult && cloudinaryResult.public_id) {
-            console.log("✅ [Storage] Cloudinary upload successful!");
+            console.log("[[Storage] Cloudinary upload successful!");
             return {
                 ...cloudinaryResult,
                 storage_provider: "cloudinary" // Mark which provider was used
@@ -33,37 +34,37 @@ const uploadWithFallback = async (localFilePath, mimetype = "") => {
         }
 
         // If Cloudinary returns null, try S3
-        console.log("⚠️ [Storage] Cloudinary failed, trying S3 fallback...");
-        const s3Result = await uploadOnS3(localFilePath, mimetype);
+        console.log(`[STORAGE] Cloudinary failed, attempting S3 fallback (type: ${fileType})`);
+        const s3Result = await uploadOnS3(localFilePath, mimetype, fileType);
 
         if (s3Result && s3Result.public_id) {
-            console.log("✅ [Storage] S3 fallback successful!");
+            console.log("[[Storage] S3 fallback successful!");
             return {
                 ...s3Result,
                 storage_provider: "s3" // Mark which provider was used
             };
         }
 
-        console.error("❌ [Storage] Both Cloudinary and S3 failed");
+        console.error("[[Storage] Both Cloudinary and S3 failed");
         return null;
 
     } catch (error) {
-        console.error("❌ [Storage] Upload error:", error.message);
+        console.error("[[Storage] Upload error:", error.message);
 
         // Last resort: try S3 if Cloudinary threw an error
         try {
-            console.log("⚠️ [Storage] Cloudinary error, trying S3 fallback...");
-            const s3Result = await uploadOnS3(localFilePath, mimetype);
+            console.log(`[STORAGE] Cloudinary error, attempting S3 fallback (type: ${fileType})`);
+            const s3Result = await uploadOnS3(localFilePath, mimetype, fileType);
 
             if (s3Result && s3Result.public_id) {
-                console.log("✅ [Storage] S3 fallback successful!");
+                console.log("[[Storage] S3 fallback successful!");
                 return {
                     ...s3Result,
                     storage_provider: "s3"
                 };
             }
         } catch (s3Error) {
-            console.error("❌ [Storage] S3 fallback also failed:", s3Error.message);
+            console.error("[[Storage] S3 fallback also failed:", s3Error.message);
         }
 
         return null;
@@ -81,11 +82,11 @@ const uploadWithFallback = async (localFilePath, mimetype = "") => {
 const deleteFromStorage = async (publicId, storageProvider = "cloudinary", resourceType = "image") => {
     try {
         if (!publicId) {
-            console.log("⚠️ [Storage] No public_id provided for deletion");
+            console.log("[[Storage] No public_id provided for deletion");
             return null;
         }
 
-        console.log(`🗑️ [Storage] Deleting from ${storageProvider}:`, publicId);
+        console.log(`[STORAGE] Deleting from ${storageProvider}:`, publicId);
 
         if (storageProvider === "s3") {
             return await deleteFromS3(publicId);
@@ -95,7 +96,7 @@ const deleteFromStorage = async (publicId, storageProvider = "cloudinary", resou
         }
 
     } catch (error) {
-        console.error("❌ [Storage] Delete error:", error.message);
+        console.error("[[Storage] Delete error:", error.message);
         return null;
     }
 };

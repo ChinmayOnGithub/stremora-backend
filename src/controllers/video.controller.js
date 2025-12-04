@@ -8,6 +8,7 @@ import { uploadWithFallback, deleteFromStorage, isVideoMimetype } from "../utils
 import cloudinary from '../utils/cloudinary.js';
 import { Like } from '../models/like.models.js';
 import History from '../models/history.models.js';
+import { getVideoMetadata, formatDuration } from '../utils/videoMetadata.js';
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -130,7 +131,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
                     videos
                 }));
     } catch (err) {
-        console.error("❌ Error fetching videos:", err);
+        console.error("[Error fetching videos:", err);
         return res
             .status(500)
             .json(new ApiError(500, "Something went wrong while fetching videos", err));
@@ -193,8 +194,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     try {
         // 1. Upload video (tries Cloudinary first, falls back to S3)
-        console.log("📤 Uploading video...");
-        videoCloudinary = await uploadWithFallback(videoLocalPath, videoFile.mimetype);
+        console.log("[Uploading video...");
+        videoCloudinary = await uploadWithFallback(videoLocalPath, videoFile.mimetype, "videos");
 
         if (!videoCloudinary) {
             throw new ApiError(500, "Cloudinary upload failed - returned null");
@@ -205,47 +206,79 @@ const publishAVideo = asyncHandler(async (req, res) => {
         }
 
         // Duration might not always be available for all video formats, so make it optional
-        console.log("✅ Video uploaded successfully:", videoCloudinary.public_id);
+        console.log("[Video uploaded successfully:", videoCloudinary.public_id);
         console.log("📦 Storage provider:", videoCloudinary.storage_provider);
 
-        console.log("✅ Video uploaded successfully:", videoCloudinary.public_id);
-
-        // 2. Calculate video duration (optional - some formats might not have duration)
+        // 2. Get video duration from upload response (works for both Cloudinary and S3)
         const duration = videoCloudinary.duration || 0;
-        let videoDuration = "0:00";
+        const videoDuration = duration > 0 ? formatDuration(duration) : "0:00";
         
-        if (duration > 0) {
-            const minutes = Math.floor((duration % 3600) / 60);
-            const seconds = Math.floor(duration % 60);
-            videoDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+        console.log("[Video duration:", videoDuration);
+        if (videoCloudinary.width && videoCloudinary.height) {
+            console.log("[Video dimensions:", `${videoCloudinary.width}x${videoCloudinary.height}`);
+        }
+
+        // 3. Handle thumbnail - upload custom or auto-generate
+        let thumbnailData = {
+            url: '',
+            public_id: '',
+            storage_provider: 'cloudinary'
+        };
+        
+        if (thumbnailLocalPath) {
+            // Custom thumbnail uploaded
+            console.log("[VIDEO] Uploading custom thumbnail");
+            const thumbnailResult = await uploadWithFallback(thumbnailLocalPath, 'image/jpeg', 'thumbnails');
+            
+            if (thumbnailResult) {
+                thumbnailData = {
+                    url: thumbnailResult.secure_url || thumbnailResult.url,
+                    public_id: thumbnailResult.public_id,
+                    storage_provider: thumbnailResult.storage_provider || 'cloudinary'
+                };
+                console.log("[VIDEO] Custom thumbnail uploaded successfully");
+            }
         }
         
-        console.log("📊 Video duration:", videoDuration);
-
-        // 3. SKIP THUMBNAIL UPLOAD FOR NOW - Just use auto-generated
-        console.log("⏭️ Skipping custom thumbnail upload for debugging...");
-        
-        // Auto-generate thumbnail from video
-        console.log("🎬 Auto-generating thumbnail from video...");
-        const thumbnailUrl = cloudinary.url(videoCloudinary.public_id, {
-            resource_type: "video",
-            transformation: [
-                { width: 300, height: 200, crop: "fill" },
-                { start_offset: "2" },
-                { format: "jpg" }
-            ]
-        });
-        console.log("✅ Auto-generated thumbnail created:", thumbnailUrl);
+        // If no custom thumbnail or upload failed, auto-generate from video
+        if (!thumbnailData.url) {
+            console.log("[VIDEO] Auto-generating thumbnail from video");
+            
+            if (videoCloudinary.storage_provider === "cloudinary") {
+                // Use Cloudinary transformation for auto-thumbnail
+                const thumbnailUrl = cloudinary.url(videoCloudinary.public_id, {
+                    resource_type: "video",
+                    transformation: [
+                        { width: 300, height: 200, crop: "fill" },
+                        { start_offset: "2" },
+                        { format: "jpg" }
+                    ]
+                });
+                thumbnailData = {
+                    url: thumbnailUrl,
+                    public_id: `${videoCloudinary.public_id}.jpg`,
+                    storage_provider: 'cloudinary'
+                };
+            } else {
+                // For S3, use video URL as fallback
+                thumbnailData = {
+                    url: videoCloudinary.url,
+                    public_id: videoCloudinary.public_id,
+                    storage_provider: 's3'
+                };
+            }
+            console.log("[VIDEO] Thumbnail auto-generated successfully");
+        }
 
         // 4. Save video to database
-        console.log("💾 Saving video to database...");
+        console.log("[Saving video to database...");
         const video = new Video({
             videoFile: {
                 url: videoCloudinary.secure_url,
                 public_id: videoCloudinary.public_id,
                 storage_provider: videoCloudinary.storage_provider || "cloudinary"
             },
-            thumbnail: thumbnailUrl,
+            thumbnail: thumbnailData,
             title,
             description,
             duration: videoDuration,
@@ -258,14 +291,14 @@ const publishAVideo = asyncHandler(async (req, res) => {
             throw new ApiError(500, "Failed to save video to database");
         }
 
-        console.log("✅ Video published successfully:", publishedVideo._id);
+        console.log("[Video published successfully:", publishedVideo._id);
 
         return res
             .status(201)
             .json(new ApiResponse(201, publishedVideo, "Video published successfully"));
 
     } catch (error) {
-        console.error("❌ Error in publishAVideo:", error.message);
+        console.error("[Error in publishAVideo:", error.message);
         
         // Cleanup any uploaded assets on failure
         await cleanup();
@@ -321,7 +354,7 @@ const getVideoById = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, "Fetched video by ID successfully", videoObj));
     } catch (error) {
-        console.error("❌ Error finding video:", error);
+        console.error("[Error finding video:", error);
         return res
             .status(500)
             .json(new ApiError(500, "Error while finding the video", error));
@@ -405,13 +438,17 @@ const updateVideo = asyncHandler(async (req, res) => {
         try {
             const existingVideo = await Video.findById(videoId);
 
-            // Upload new thumbnail using working function
-            const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+            // Upload new thumbnail using hybrid storage with proper folder
+            const thumbnail = await uploadWithFallback(thumbnailLocalPath, 'image/jpeg', 'thumbnails');
 
             if (thumbnail?.secure_url) {
                 // Delete old thumbnail only after successful upload of new one
                 if (existingVideo?.thumbnail?.public_id) {
-                    await deleteFromCloudinary(existingVideo.thumbnail.public_id, "image");
+                    await deleteFromStorage(
+                        existingVideo.thumbnail.public_id,
+                        existingVideo.thumbnail.storage_provider || "cloudinary",
+                        "image"
+                    );
                 }
 
                 updateFields.thumbnail = {
@@ -504,7 +541,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
             .status(200)
             .json(new ApiResponse(200, "Video publish status updated successfully", video));
     } catch (error) {
-        console.error("❌ Error updating publish status:", error);
+        console.error("[Error updating publish status:", error);
         return res
             .status(500)
             .json(new ApiError(500, "Something went wrong while setting publish status", error));

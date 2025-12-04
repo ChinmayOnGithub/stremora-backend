@@ -16,9 +16,9 @@ class EmailService {
     // Verify connection configuration
     this.transporter.verify((error, success) => {
       if (error) {
-        console.error('Email service configuration error:', error);
+        console.error('[EMAIL] Configuration error:', error.message);
       } else {
-        console.log('Email service is ready to send messages');
+        console.log('[EMAIL] Service initialized and ready');
       }
     });
   }

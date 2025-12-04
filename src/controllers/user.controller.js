@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
+import { uploadWithFallback, deleteFromStorage } from "../utils/storage.js";
 import jwt from 'jsonwebtoken';
 import { emailService } from "../utils/emailService.js";
 
@@ -96,26 +97,32 @@ const registerUser = asyncHandler(async (req, res) => {
     //     throw new ApiError(400, "Avatar file is missing");
     // };
 
-    let avatar = "", coverImage;
+    let avatar = "", coverImage = "";
     if (avatarLocalPath) {
         try {
-            const uploadedAvatar = await uploadOnCloudinary(avatarLocalPath);
-            avatar = uploadedAvatar.url;
-            console.log("Uploaded avatar", uploadedAvatar);
+            console.log("[Uploading avatar during registration...");
+            const uploadedAvatar = await uploadWithFallback(avatarLocalPath, 'image/jpeg', 'avatars');
+            if (uploadedAvatar) {
+                avatar = uploadedAvatar.secure_url || uploadedAvatar.url;
+                console.log("[Uploaded avatar:", avatar);
+            }
         } catch (error) {
-            console.log("Error uploading avatar!.", error);
+            console.error("[Error uploading avatar:", error);
             throw new ApiError(500, "Failed to upload avatar");
         }
     }
     // optionally uploading the coverImage
     if (coverImageLocalPath) {
         try {
-            coverImage = await uploadOnCloudinary(coverImageLocalPath);
-            console.log("Uploaded coverImage", coverImage);
-
+            console.log("[Uploading cover image during registration...");
+            const uploadedCover = await uploadWithFallback(coverImageLocalPath, 'image/jpeg', 'covers');
+            if (uploadedCover) {
+                coverImage = uploadedCover.secure_url || uploadedCover.url;
+                console.log("[Uploaded cover image:", coverImage);
+            }
         } catch (error) {
-            console.log("Error uploading coverImage!.", error);
-            throw new ApiError(500, "Failed to upload coverImage");
+            console.error("[Error uploading cover image:", error);
+            throw new ApiError(500, "Failed to upload cover image");
         }
     }
 
@@ -558,23 +565,31 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         throw new ApiError(404, "File is required");
     }
 
-    const avatarLocalPath = req.file.path;
+    const avatarLocalPath = req.file?.path;
 
-    if (!avatarLocalPath.trim()) {
-        throw new ApiError(404, "File-path is required");
+    if (!avatarLocalPath || !avatarLocalPath.trim()) {
+        throw new ApiError(400, "Avatar file is required");
     }
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    console.log("[Uploading avatar...");
+    const avatar = await uploadWithFallback(avatarLocalPath, req.file.mimetype, 'avatars');
 
-    if (!avatar.url) {
-        throw new ApiError(500, "Something went wrong while (updating) uploading avatar");
+    if (!avatar) {
+        throw new ApiError(500, "Avatar upload failed - both Cloudinary and S3 failed");
     }
+
+    const avatarUrl = avatar.secure_url || avatar.url;
+    if (!avatarUrl) {
+        throw new ApiError(500, "Avatar upload returned no URL");
+    }
+
+    console.log("[Avatar uploaded:", avatarUrl);
 
     const user = await User.findByIdAndUpdate(
         req.user._id,
         {
             $set: {
-                avatar: avatar.url,
+                avatar: avatarUrl,
             }
         },
         { new: true }
@@ -591,19 +606,28 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     const coverImageLocalPath = req.file?.path;
 
     if (!coverImageLocalPath) {
-        throw new ApiError(400, "File is required");
+        throw new ApiError(400, "Cover image file is required");
     }
 
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-    if (!coverImage.url) {
-        throw new Error("Something went wrong while uploading cover");
+    console.log("[Uploading cover image...");
+    const coverImage = await uploadWithFallback(coverImageLocalPath, req.file.mimetype, 'covers');
+    
+    if (!coverImage) {
+        throw new ApiError(500, "Cover image upload failed - both Cloudinary and S3 failed");
     }
+
+    const coverImageUrl = coverImage.secure_url || coverImage.url;
+    if (!coverImageUrl) {
+        throw new ApiError(500, "Cover image upload returned no URL");
+    }
+
+    console.log("[Cover image uploaded:", coverImageUrl);
 
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
-                coverImage: coverImage.url
+                coverImage: coverImageUrl
             }
         },
         { new: true }

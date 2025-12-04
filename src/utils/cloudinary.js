@@ -22,13 +22,13 @@ const uploadOnCloudinary = async (localFilePath) => {
             resource_type: "auto",
         });
 
+        // Only delete file on SUCCESS
         fs.unlinkSync(localFilePath);
         return response;
     } catch (error) {
         console.error("Cloudinary upload error:", error.message);
-        if (fs.existsSync(localFilePath)) {
-            fs.unlinkSync(localFilePath);
-        }
+        // DON'T delete file on error - let S3 fallback use it!
+        // File will be cleaned up by S3 upload or controller cleanup
         return null;
     }
 };

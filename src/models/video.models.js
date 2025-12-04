@@ -34,13 +34,18 @@ const videoSchema = new Schema({
     thumbnail: {
         url: {
             type: String,
-            required: false, // FIXED: Make thumbnail URL optional since auto-generation might fail
-            default: "" // Provide a default empty string
+            required: false,
+            default: ""
         },
         public_id: {
             type: String,
             required: false
         },
+        storage_provider: {
+            type: String,
+            enum: ["cloudinary", "s3"],
+            default: "cloudinary"
+        }
     },
     title: {
         type: String,
