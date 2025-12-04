@@ -1,357 +1,165 @@
-# Stremora Backend API
+# Stremora Backend
 
-<div align="center">
-
-![Stremora Banner](https://placehold.co/1200x300/1a1a1a/f59e0b?text=Stremora&font=raleway)
-
-[![Node.js](https://img.shields.io/badge/Node.js-v18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io/)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)](https://github.com/ChinmayOnGithub/stremora-backend)
-
-**A robust, scalable video-sharing platform backend built with modern Node.js technologies**
-
-[🚀 Live Demo](https://stremora-api.render.com) · [📖 API Documentation](https://stremora-docs.vercel.app) · [🐛 Report Bug](https://github.com/ChinmayOnGithub/stremora-backend/issues)
-
-</div>
-
----
-
-## 📋 Table of Contents
-
-- [About Stremora](#about-stremora)
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Project Architecture](#project-architecture)
-- [Getting Started](#getting-started)
-- [API Endpoints](#api-endpoints)
-- [Authentication Flow](#authentication-flow)
-- [Project Structure](#project-structure)
-- [Deployment](#deployment)
-- [License](#license)
-
----
-
-## About Stremora
-
-Stremora is a modern **video-sharing platform backend** that provides a comprehensive RESTful API for building video streaming applications. Built with scalability and performance in mind, it handles everything from user authentication to video management and social interactions.
-
-### Why Stremora?
-
-- **🔒 Security-First**: Comprehensive JWT authentication with email verification
-- **☁️ Cloud-Native**: Seamless integration with Cloudinary for media management  
-- **📈 Scalable**: Built to handle high-volume video uploads and user interactions
-- **🎛️ Feature-Rich**: Complete social features including likes, comments, and subscriptions
-- **🔧 Developer-Friendly**: Clean, well-documented API with consistent response patterns
-
----
-
-## Key Features
-
-### Authentication & Security
-- JWT-based authentication with access and refresh tokens
-- Email verification system with 6-digit verification codes
-- Password reset flow with secure token-based reset mechanism
-- bcrypt password hashing for enhanced security
-
-### Video Management
-- Full CRUD operations for video content
-- Cloudinary integration for high-quality video storage and delivery
-- Automatic thumbnail generation and management
-- Video analytics with view tracking
-
-### Social Features
-- User subscriptions and channel management
-- Like/Unlike system for videos and comments
-- Nested comment system with threaded discussions
-- User profiles with customizable avatars and cover images
-
-### Advanced Features
-- MongoDB aggregation pipelines for complex data queries
-- Email service integration via Nodemailer
-- File upload handling with Multer and Cloudinary
-- Comprehensive error handling with custom ApiError classes
-- Async wrapper utilities for clean error management
-
----
+Video storage and management platform backend with hybrid cloud storage (Cloudinary + AWS S3).
 
 ## Tech Stack
 
-**Backend**: Node.js, Express.js, JavaScript
+- **Runtime:** Bun
+- **Framework:** Express.js
+- **Database:** MongoDB
+- **Storage:** Cloudinary (primary) + AWS S3 (fallback)
+- **Auth:** JWT + Passport (Google OAuth)
+- **Email:** Nodemailer
 
-**Database**: MongoDB with Mongoose ODM
+## Quick Start
 
-**Authentication**: JWT (jsonwebtoken), bcrypt
+```bash
+# Install dependencies
+bun install
 
-**File Storage**: Cloudinary for cloud-based media management
+# Setup environment
+cp .env.production.example .env
+# Edit .env with your credentials
 
-**Email Service**: Nodemailer
+# Run development server
+bun run dev
 
-**Runtime**: Bun for fast package management
-
-**Deployment**: Render
-
----
-
-## Project Architecture
-
-Stremora follows a modular, three-layer architecture designed for maintainability and scalability:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Web Layer                               │
-│     Routes → Controllers → Middleware                      │
-├─────────────────────────────────────────────────────────────┤
-│                  Service Layer                             │
-│            Business Logic & Data Processing                │
-├─────────────────────────────────────────────────────────────┤
-│                Data Access Layer                           │
-│         MongoDB via Mongoose ODM & Cloudinary              │
-└─────────────────────────────────────────────────────────────┘
+# Server starts on http://localhost:8000
 ```
 
-### Key Architectural Principles
+## Environment Variables
 
-- **Separation of Concerns**: Each layer has distinct responsibilities
-- **Error-First Design**: Comprehensive error handling throughout the stack
-- **Async/Await Pattern**: Non-blocking operations for optimal performance
-- **Modular Structure**: Clean organization for maintainability
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18.x or later)
-- Bun (latest version)  
-- MongoDB (local or cloud instance)
-- Git
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/ChinmayOnGithub/stremora-backend.git
-   cd stremora-backend
-   ```
-
-2. **Install dependencies**
-   ```bash
-   bun install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-
-### Environment Setup
-
-Create a `.env` file in the root directory:
+Required variables in `.env`:
 
 ```env
-# Server Configuration
+# Server
 PORT=8000
-NODE_ENV=development
-
-# Database
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/stremora
-
-# CORS
 CORS_ORIGIN=http://localhost:5173
 
-# JWT Secrets
-ACCESS_TOKEN_SECRET=your_super_secret_access_token_here
-ACCESS_TOKEN_EXPIRY=1d
-REFRESH_TOKEN_SECRET=your_super_secret_refresh_token_here
-REFRESH_TOKEN_EXPIRY=10d
+# Database
+MONGODB_URI=your_mongodb_connection_string
 
-# Cloudinary Configuration
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+# JWT
+ACCESS_TOKEN_SECRET=your_secret
+REFRESH_TOKEN_SECRET=your_secret
+ACCESS_TOKEN_EXPIRY=30m
+REFRESH_TOKEN_EXPIRY=7d
 
-# Email Service
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
+# Cloudinary (Primary Storage)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# AWS S3 (Fallback Storage)
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_S3_BUCKET_NAME=your-bucket-name
+
+# Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email
+SMTP_PASS=your_app_password
+SMTP_FROM_EMAIL=your_email
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
 
 # Frontend URL
 FRONTEND_URL=http://localhost:5173
 ```
 
-### Running the Application
+## Storage System
+
+Hybrid storage with automatic fallback:
+
+1. **Cloudinary** - Tries first (25GB free tier)
+2. **AWS S3** - Automatic fallback if Cloudinary fails
+
+Files are organized in folders:
+- `videos/` - Video files
+- `thumbnails/` - Video thumbnails
+- `avatars/` - User profile pictures
+- `covers/` - Channel cover images
+
+### Local Testing (MinIO)
+
+For local S3 testing without AWS:
 
 ```bash
-# Development mode
-bun run dev
+# Start MinIO
+docker run -d -p 9000:9000 -p 9001:9001 \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  quay.io/minio/minio server /data --console-address ":9001"
 
-# Production mode
-bun start
+# Update .env
+USE_LOCAL_S3=true
+LOCAL_S3_ENDPOINT=http://localhost:9000
+AWS_ACCESS_KEY_ID=minioadmin
+AWS_SECRET_ACCESS_KEY=minioadmin
+AWS_S3_BUCKET_NAME=stremora-videos
 ```
 
-Server will be running at `http://localhost:8000`
+Create bucket at http://localhost:9001 (login: minioadmin/minioadmin)
 
----
+### Production (AWS S3)
+
+```env
+USE_LOCAL_S3=false
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_aws_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret
+AWS_S3_BUCKET_NAME=stremora-videos
+```
+
+See `docs/AWS_S3_PRODUCTION_SETUP.md` for detailed AWS setup.
 
 ## API Endpoints
 
-### Base URL
-```
-Production: https://stremora-api.render.com/api/v1
-Development: http://localhost:8000/api/v1
-```
+- `POST /api/v1/users/register` - User registration
+- `POST /api/v1/users/login` - User login
+- `POST /api/v1/video/publish` - Upload video
+- `GET /api/v1/video` - Get all videos
+- `GET /api/v1/video/:id` - Get video by ID
+- `PATCH /api/v1/users/avatar` - Update avatar
+- `PATCH /api/v1/users/cover-image` - Update cover
 
-### Authentication
+Full API documentation: See routes in `src/routes/`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/users/register` | Create new user account |
-| `POST` | `/users/login` | User login |
-| `POST` | `/users/logout` | User logout |
-| `GET` | `/users/current-user` | Get current user info |
-| `POST` | `/users/forgot-password` | Send password reset email |
-| `POST` | `/users/reset-password` | Reset user password |
+## Features
 
-### Email Verification
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/email/verify` | Verify email with code |
-| `POST` | `/email/resend` | Resend verification code |
-
-### Videos
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/videos` | Get all videos (paginated) |
-| `POST` | `/videos` | Upload new video |
-| `GET` | `/videos/:videoId` | Get specific video |
-| `PATCH` | `/videos/:videoId` | Update video details |
-| `DELETE` | `/videos/:videoId` | Delete video |
-
-### Social Features
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/subscriptions/:channelId` | Subscribe to channel |
-| `DELETE` | `/subscriptions/:channelId` | Unsubscribe from channel |
-| `POST` | `/likes/video/:videoId` | Like/unlike video |
-| `POST` | `/comments/:videoId` | Add comment to video |
-| `GET` | `/comments/:videoId` | Get video comments |
-
----
-
-## Authentication Flow
-
-Stremora implements a sophisticated authentication system:
-
-1. **Registration**: User creates account → Email verification code sent → Account created (unverified)
-2. **Email Verification**: User enters 6-digit code → Email marked as verified
-3. **Login**: Credentials validated → Email verification checked → JWT tokens issued
-4. **Token Management**: Short-lived access tokens with long-lived refresh tokens
-5. **Password Reset**: Secure token-based reset with SHA256 hashing
-
-### Security Features
-
-- **Email Verification Required**: Users cannot login without email verification
-- **Secure Password Hashing**: bcrypt with salt rounds
-- **JWT Token Strategy**: Separate access and refresh tokens
-- **Password Reset Security**: Cryptographically secure tokens with expiration
-
----
+- JWT authentication with refresh tokens
+- Google OAuth integration
+- Email verification
+- Video upload with metadata extraction (FFmpeg)
+- Automatic thumbnail generation
+- Like/comment system
+- Watch history tracking
+- Subscription management
+- Admin dashboard
 
 ## Project Structure
 
 ```
-stremora-backend/
+backend/
 ├── src/
-│   ├── controllers/          # Request handlers and business logic
-│   ├── models/               # MongoDB schemas and models
-│   ├── routes/               # API route definitions  
-│   ├── middlewares/          # Custom middleware functions
-│   ├── utils/                # Utility functions and classes
-│   ├── db/                   # Database connection logic
-│   ├── app.js                # Express app configuration
-│   └── index.js              # Server entry point
-├── public/                   # Static assets and temp files
-├── .env.example              # Environment variables template
-├── package.json              # Project dependencies and scripts
-└── README.md                 # Project documentation
+│   ├── controllers/    # Request handlers
+│   ├── models/         # MongoDB schemas
+│   ├── routes/         # API routes
+│   ├── middlewares/    # Auth, error handling
+│   ├── utils/          # Storage, email, helpers
+│   └── db/             # Database connection
+├── public/temp/        # Temporary upload files
+└── logs/               # Application logs
 ```
-
-### Key Components
-
-**Middleware Layer**
-- `auth.middleware.js`: JWT token validation and user authentication
-- `multer.middleware.js`: File upload handling for videos and images
-
-**Utility Classes**
-- `ApiError.js`: Standardized error handling with HTTP status codes
-- `ApiResponse.js`: Consistent API response formatting
-- `asyncHandler.js`: Promise-based error handling wrapper
-- `cloudinary.js`: Cloud storage integration utilities
-
-**Database Models**
-- User Model: Authentication, profiles, and user management
-- Video Model: Video metadata, file URLs, and engagement metrics
-- Subscription Model: User-to-channel relationship management
-- Comment Model: Threaded commenting system
-
----
 
 ## Deployment
 
-### Render Configuration
-
-Deployed on [Render](https://render.com/) with the following setup:
-
-- **Build Command**: `bun install`
-- **Start Command**: `node src/index.js`
-- **Environment**: Node.js
-- **Auto-Deploy**: Enabled from `main` branch
-
-### Environment Variables
-
-Configure production environment variables in Render dashboard:
-- Database connections (MongoDB Atlas recommended)
-- Cloudinary credentials
-- JWT secrets (use strong, random strings)
-- Email service credentials
-- CORS origins (frontend URL)
-
-### Health Check
-
-```bash
-GET /api/v1/healthcheck
-```
-
-Response:
-```json
-{
-  "success": true,
-  "message": "API is running successfully",
-  "timestamp": "2025-01-20T10:30:00.000Z"
-}
-```
-
----
+Backend is deployed on AWS. Update environment variables for production.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**Built with ❤️ using Node.js, Express, and MongoDB**
-
-[Repository](https://github.com/ChinmayOnGithub/stremora-backend) · [Issues](https://github.com/ChinmayOnGithub/stremora-backend/issues)
-
-</div>
+ISC
