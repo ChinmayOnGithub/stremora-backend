@@ -23,10 +23,11 @@ class EmailService {
     });
   }
 
-  async sendVerificationEmail(email, verificationCode, fullname, verificationToken = null) {
+  async sendVerificationEmail(email, verificationCode, fullname, verificationToken = null, frontendUrl = null) {
     try {
+      const baseUrl = frontendUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
       const verificationLink = verificationToken
-        ? `${process.env.FRONTEND_URL}/api/v1/email/verify-link/${verificationToken}`
+        ? `${baseUrl}/api/v1/email/verify-link/${verificationToken}`
         : null;
 
       const mailOptions = {
@@ -111,8 +112,9 @@ class EmailService {
     }
   }
 
-  async sendWelcomeEmail(email, fullname) {
+  async sendWelcomeEmail(email, fullname, frontendUrl = null) {
     try {
+      const baseUrl = frontendUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
       const mailOptions = {
         from: {
           name: 'STREMORA',
@@ -137,7 +139,7 @@ class EmailService {
                             </p>
                             
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" 
+                                <a href="${baseUrl}" 
                                    style="display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; 
                                           text-decoration: none; border-radius: 5px; font-weight: bold;">
                                     Start Exploring

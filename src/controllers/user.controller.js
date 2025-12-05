@@ -157,12 +157,16 @@ const registerUser = asyncHandler(async (req, res) => {
         const verificationCode = user.generateEmailVerificationToken();
         await user.save({ validateBeforeSave: false });
 
-        // Import emailService at the top of your file
-        // import { emailService } from "../utils/emailService.js";
+        // Get frontend URL from request origin or fallback to env
+        const origin = req.get('origin') || req.get('referer') || process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontendUrl = origin.replace(/\/$/, '').split('?')[0].split('#')[0];
+
         await emailService.sendVerificationEmail(
             user.email,
             verificationCode,
-            user.fullname
+            user.fullname,
+            null,
+            frontendUrl
         );
 
         // Get user without sensitive information
@@ -695,8 +699,12 @@ const forgotPassword = asyncHandler(async (req, res) => {
     user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save({ validateBeforeSave: false });
 
+    // Get frontend URL from request origin or fallback to env
+    const origin = req.get('origin') || req.get('referer') || process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = origin.replace(/\/$/, '').split('?')[0].split('#')[0];
+    
     // Create reset URL
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     try {
         // Send email

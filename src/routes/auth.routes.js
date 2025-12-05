@@ -71,15 +71,30 @@ passport.deserializeUser(async (id, done) => {
 // Google OAuth routes
 router.get(
   "/google",
+  (req, res, next) => {
+    // Store the origin/referer in session for callback redirect
+    const origin = req.get('origin') || req.get('referer') || process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Remove trailing slash and any path
+    const frontendUrl = origin.replace(/\/$/, '').split('?')[0];
+    req.session = req.session || {};
+    req.session.oauth_redirect = frontendUrl;
+    next();
+  },
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: `${process.env.FRONTEND_URL}/?auth=failed` }),
+  passport.authenticate("google", { session: false }),
   async (req, res) => {
     try {
       const user = req.user;
+      
+      if (!user) {
+        // Get frontend URL from session or fallback
+        const frontendUrl = req.session?.oauth_redirect || process.env.FRONTEND_URL || 'http://localhost:5173';
+        return res.redirect(`${frontendUrl}/?auth=failed`);
+      }
 
       // Generate tokens
       const accessToken = user.generateAccessToken();
@@ -92,11 +107,15 @@ router.get(
       // Store tokens in localStorage via a redirect page
       const tokens = encodeURIComponent(JSON.stringify({ accessToken, refreshToken }));
       
+      // Get frontend URL from session or fallback
+      const frontendUrl = req.session?.oauth_redirect || process.env.FRONTEND_URL || 'http://localhost:5173';
+      
       // Redirect to frontend with tokens in URL (will be handled by frontend)
-      res.redirect(`${process.env.FRONTEND_URL}/?auth=success&tokens=${tokens}`);
+      res.redirect(`${frontendUrl}/?auth=success&tokens=${tokens}`);
     } catch (error) {
       console.error("OAuth callback error:", error);
-      res.redirect(`${process.env.FRONTEND_URL}/?auth=failed`);
+      const frontendUrl = req.session?.oauth_redirect || process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendUrl}/?auth=failed`);
     }
   }
 );
