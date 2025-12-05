@@ -9,29 +9,22 @@ const allowedOrigins = [
     "http://localhost:5173",
     "http://192.168.1.9:5173",
     "https://stremora.vercel.app",
-    "https://stremora.chinmaypatil.com",
-    "https://www.stremora.chinmaypatil.com" // Add www version too
+    "https://stremora.chinmaypatil.com"
 ]
 
 app.use(cors({
     origin: (origin, cb) => {
-        // Allow requests with no origin (like mobile apps, Postman, or same-origin)
-        if (!origin || allowedOrigins.includes(origin)) {
-            cb(null, true);
-        } else {
-            console.log(`CORS blocked origin: ${origin}`);
-            cb(new Error("Not allowed by CORS"));
-        }
+        if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+        else cb(new Error("Not allowed by CORS"));
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     exposedHeaders: ["Content-Range", "X-Total-Count"],
-    maxAge: 86400 // 24 hours
 }));
 
-// Handle preflight requests
-app.options("*", cors());
+// Answer all OPTIONS requests
+// app.options("*", cors());
 
 // app.use(
 //     // cors is middleware that decide who can access our server
