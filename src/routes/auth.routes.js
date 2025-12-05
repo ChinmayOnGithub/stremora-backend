@@ -68,6 +68,16 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+// Debug endpoint to check OAuth configuration
+router.get("/debug-config", (req, res) => {
+  res.json({
+    backendUrl: process.env.BACKEND_URL || "NOT SET",
+    frontendUrl: process.env.FRONTEND_URL || "NOT SET",
+    callbackUrl: `${process.env.BACKEND_URL || "http://localhost:8000"}/api/v1/auth/google/callback`,
+    nodeEnv: process.env.NODE_ENV || "NOT SET"
+  });
+});
+
 // Google OAuth routes
 router.get(
   "/google",
