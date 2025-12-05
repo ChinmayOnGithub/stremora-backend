@@ -88,44 +88,9 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
 
-    // now handling the file upload part
-    console.warn(req.files)
-    const avatarLocalPath = req.files?.avatar?.[0]?.path
-    const coverImageLocalPath = req.files?.coverImage?.[0]?.path
-
-    // Remove this check to make avatar optional
-    // if (!avatarLocalPath) {
-    //     throw new ApiError(400, "Avatar file is missing");
-    // };
-
-    let avatar = "", coverImage = "";
-    if (avatarLocalPath) {
-        try {
-            console.log("[Uploading avatar during registration...");
-            const uploadedAvatar = await uploadWithFallback(avatarLocalPath, 'image/jpeg', 'avatars');
-            if (uploadedAvatar) {
-                avatar = uploadedAvatar.secure_url || uploadedAvatar.url;
-                console.log("[Uploaded avatar:", avatar);
-            }
-        } catch (error) {
-            console.error("[Error uploading avatar:", error);
-            throw new ApiError(500, "Failed to upload avatar");
-        }
-    }
-    // optionally uploading the coverImage
-    if (coverImageLocalPath) {
-        try {
-            console.log("[Uploading cover image during registration...");
-            const uploadedCover = await uploadWithFallback(coverImageLocalPath, 'image/jpeg', 'covers');
-            if (uploadedCover) {
-                coverImage = uploadedCover.secure_url || uploadedCover.url;
-                console.log("[Uploaded cover image:", coverImage);
-            }
-        } catch (error) {
-            console.error("[Error uploading cover image:", error);
-            throw new ApiError(500, "Failed to upload cover image");
-        }
-    }
+    // Avatar and cover image are now completely optional - no file handling needed during registration
+    let avatar = "";
+    let coverImage = "";
 
     // Now all data is taken from the user. Lets create user from data from the mongoose database.
     // try {

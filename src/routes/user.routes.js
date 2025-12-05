@@ -31,6 +31,26 @@ router.route("/register").post(upload.fields([
     }
 ]), registerUser)
 
+// Username availability check
+router.route("/check-username/:username").get(async (req, res) => {
+    try {
+        const { username } = req.params;
+        const existingUser = await import('../models/user.models.js').then(m => m.User.findOne({ username: username.toLowerCase() }));
+        return res.status(200).json({
+            success: true,
+            data: {
+                available: !existingUser,
+                username
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Error checking username availability"
+        });
+    }
+})
+
 
 router.route("/login").post(loginUser)
 router.route("/refresh-token").post(refreshAccessToken)

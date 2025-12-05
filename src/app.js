@@ -37,7 +37,23 @@ app.use(cors({
 // common middlewares
 // import requestLogger from "./utils/requestLogger.js";
 import logMiddleware from "./middlewares/log.middleware.js";
+import passport from "passport";
+import session from "express-session";
 
+// Session configuration for passport
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // app.use(express.json({ limit: "16kb" }));
 app.use(express.json());
@@ -60,6 +76,7 @@ import dashboardRouter from "./routes/dashboard.routes.js"
 import historyRouter from "./routes/history.routes.js"
 import adminRouter from "./routes/admin.routes.js";
 import emailVerificationRouter from "./routes/emailverification.routes.js";
+import authRouter from "./routes/auth.routes.js";
 
 // routes
 app.use('/api/v1/health', healthCheckRouter);
@@ -74,6 +91,7 @@ app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/history", historyRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/email", emailVerificationRouter);
+app.use("/api/v1/auth", authRouter);
 
 // good practice to have control over the errors. (Optional) This error.middleware.js file changes rarely.
 import { errorHandler } from "./middlewares/error.middleware.js";

@@ -90,6 +90,16 @@ const userSchema = new Schema(
         passwordResetExpires: {
             type: Date,
             default: null
+        },
+        googleId: {
+            type: String,
+            default: null,
+            sparse: true
+        },
+        authProvider: {
+            type: String,
+            enum: ["local", "google"],
+            default: "local"
         }
     },
     { timestamps: true } // createdAt and updatedAt is added here
