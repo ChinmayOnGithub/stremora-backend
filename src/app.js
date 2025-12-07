@@ -9,17 +9,27 @@ const allowedOrigins = [
     "http://localhost:5173",
     "http://192.168.1.9:5173",
     "https://stremora.vercel.app",
-    "https://stremora.chinmaypatil.com"
+    "https://stremora.chinmaypatil.com",
+    "https://www.stremora.chinmaypatil.com"
 ]
 
 app.use(cors({
     origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) cb(null, true);
-        else cb(new Error("Not allowed by CORS"));
+        // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+        if (!origin) return cb(null, true);
+        
+        // Allow all origins in development
+        if (process.env.NODE_ENV !== 'production') return cb(null, true);
+        
+        // Check if origin is in allowed list
+        if (allowedOrigins.includes(origin)) return cb(null, true);
+        
+        // Reject other origins
+        cb(new Error("Not allowed by CORS"));
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     exposedHeaders: ["Content-Range", "X-Total-Count"],
 }));
 
